@@ -12,6 +12,7 @@
 #include "world/AsyncWorldStreaming.hpp"
 #include "world/StreamingUploadQueue.hpp"
 #include "gameplay/CharacterMotor.hpp"
+#include "net/MMOShardRuntime.hpp"
 #include <chrono>
 #include <iostream>
 #include <string>
@@ -42,6 +43,7 @@ int main(){
     shn::render::ShadowCuller shadow; auto shadowIds=shadow.visible(fr,{{4,0,0,0,1},{5,-4,0,0,1}}); if(shadowIds.size()!=1 || shadowIds[0]!=4){std::cerr<<"Runtime self-test FAILED: shadow culling\n";return 14;}
     shn::render::TransientGpuAllocator arena(4096); auto a=arena.allocate(256), b=arena.allocate(512); if(a.size!=256 || b.size!=512 || arena.used()==0){std::cerr<<"Runtime self-test FAILED: transient GPU allocator\n";return 15;}
     shn::render::GpuTimestampProfiler profiler; if(!std::is_same_v<decltype(profiler.collect()),std::vector<shn::render::GpuTiming>>){std::cerr<<"Runtime self-test FAILED: GPU profiler API\n";return 16;}
-    std::cout<<"Runtime self-test PASSED: world streaming, GPU culling, Hi-Z, frame graph, frustum/LOD, batching, GPU skinning, shadows, transient GPU allocation, character motor, animation, AVIF materials, navigation, physics, replication and persistence contracts loaded.\n";
+    shn::net::MMOShardRuntime shards(4); shards.connect(1,0,0,0,0,100); shards.upsert({1,10,0,0,1}); shards.upsert({2,500,0,0,1}); const auto deltas=shards.shardFor(1).snapshot(1); if(deltas.size()!=1 || deltas[0].id!=1){std::cerr<<"Runtime self-test FAILED: MMO shard interest\n";return 17;}
+    std::cout<<"Runtime self-test PASSED: world streaming, GPU culling, Hi-Z, frame graph, frustum/LOD, batching, GPU skinning, shadows, transient GPU allocation, character motor, MMO shard interest, animation, AVIF materials, navigation, physics, replication and persistence contracts loaded.\n";
     return 0;
 }

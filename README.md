@@ -11,11 +11,9 @@ Sharnou Engine is a Windows 10 x64 native C++23 engine foundation for a 3D HD MM
 - Texture source format: .avif only
 - Build system: CMake + vcpkg
 
-Direct3D 11 is a native Windows/C++ graphics API and Windows 10 includes the Direct3D 11.3 API. See Microsoft documentation: https://learn.microsoft.com/en-us/windows/win32/direct3darticles/direct3d11-deployment
-
 ## Architecture
 
-The runtime deliberately follows the common-layer spirit of engineerOfLies/gfc without copying its source files. The upstream project describes itself as Game Framework Common, a common library for Game Framework 2D and 3D, and is MIT-licensed. See ATTRIBUTION.md and https://github.com/engineerOfLies/gfc.
+The runtime deliberately follows the common-layer spirit of engineerOfLies/gfc without copying its source files. The upstream project describes itself as Game Framework Common, a common library for Game Framework 2D and 3D, and is MIT-licensed. See ATTRIBUTION.md.
 
 Current engine layers include:
 
@@ -31,6 +29,10 @@ Current engine layers include:
 10. Skeletal animation, material registry, navigation, fixed-step physics, replication and persistence foundations.
 11. A renderer-independent dedicated server target.
 12. Windows CI and a 1 GiB runtime-binary size guard.
+13. A Hi-Z depth-pyramid foundation for hierarchical occlusion testing.
+14. A dependency-aware render frame graph for ordered GPU passes.
+15. A thread-safe streaming-to-GPU upload queue.
+16. A deterministic character motor with acceleration, gravity and jump state.
 
 ## Build on Windows 10
 
@@ -53,24 +55,36 @@ Only files with the .avif extension are accepted by the runtime texture loader. 
 
 Decoded RGBA data is uploaded into an immutable D3D11 shader resource. The engine does not ship a large demo texture pack, which keeps the repository and first-run footprint small.
 
-## GPU-driven rendering stage
+## Renderer stage
 
-`src/render/GpuDrivenScene.hpp` now provides a D3D11 compute-culling foundation: structured instance data, a 64-thread compute shader, a GPU visible-index buffer and a `DrawIndexedInstancedIndirect` argument buffer. The current visibility predicate is distance-based. Frustum planes, Hi-Z occlusion, LOD selection, material binning, GPU skinning and shadow culling are the next renderer layer.
+`src/render/GpuDrivenScene.hpp` provides the D3D11 compute-culling foundation: structured instance data, a 64-thread compute shader, a GPU visible-index buffer and a `DrawIndexedInstancedIndirect` argument buffer.
 
-## Asynchronous world streaming stage
+`src/render/HiZOcclusion.hpp` provides a hierarchical depth representation with conservative max-depth reduction. It is a CPU-side contract layer today and is deliberately isolated so the same resource layout can be moved to a D3D11 compute-generated pyramid when the renderer binds a depth SRV/UAV path.
 
-`src/world/AsyncWorldStreaming.hpp` provides worker-backed cell scheduling with `Unloaded`, `Queued`, `Loading`, `Resident` and `Evicting` states. The production cell package format is intentionally not invented yet; a later asset-cooking stage should define versioned cell manifests, dependency data, mesh data, collision data and GPU-upload records.
+`src/render/RenderFrameGraph.hpp` provides dependency-aware pass scheduling. A production frame can now be expressed as resource dependencies rather than hard-coded submission order.
 
-The intended frame path is gameplay tick -> streaming requests -> completed background work -> GPU upload -> GPU visibility -> indirect geometry -> lighting/shadows -> UI -> present.
+The next renderer layers are camera frustum planes, GPU Hi-Z generation, hierarchical occlusion, LOD/HLOD selection, material/mesh batching, GPU skeletal skinning, shadow-caster culling, transient GPU allocation and timestamp profiling.
+
+## World streaming stage
+
+`src/world/AsyncWorldStreaming.hpp` provides worker-backed cell scheduling with `Unloaded`, `Queued`, `Loading`, `Resident` and `Evicting` states.
+
+`src/world/StreamingUploadQueue.hpp` provides the boundary between background asset preparation and the render thread's GPU upload stage. The production cell package format should remain versioned and contain cell manifests, dependency data, mesh records, collision records, AVIF material references and GPU upload records.
+
+The intended frame path is gameplay tick -> streaming requests -> completed background work -> GPU upload -> frame graph -> GPU visibility -> indirect geometry -> lighting/shadows -> UI -> present.
+
+## Gameplay stage
+
+`src/gameplay/CharacterMotor.hpp` supplies a deterministic lightweight character controller contract for movement, acceleration, gravity, ground state and jump impulses. It is intended to be shared conceptually by client prediction and server simulation, while authoritative collision remains a server concern.
 
 ## Size target
 
-The engineering target is a runtime package below 1 GiB. The repository contains a size guard, but final installed size depends on codec linkage and the Windows runtime dependencies. No unsupported claim is made that the engine is already faster or more capable than Unity or Unreal across all workloads; the target is a specialized architecture with lower baseline overhead and controllable runtime costs.
+The engineering target is a runtime package below 1 GiB. The repository contains a size guard, but final installed size depends on codec linkage and Windows runtime dependencies. No unsupported claim is made that the engine is already faster or more capable than Unity or Unreal across all workloads; the target is a specialized architecture with lower baseline overhead and controllable runtime costs.
 
 ## Validation
 
-`SharnouRuntimeSelfTest` validates the base runtime contracts, asynchronous streaming contract and GPU-culling shader contract. Actual D3D11 device execution and performance profiling still require a Windows machine with a Direct3D 11-capable adapter.
+`SharnouRuntimeSelfTest` now validates base runtime contracts, asynchronous streaming, GPU-culling shader structure, Hi-Z construction, frame-graph ordering, streaming upload handoff and character motor behavior. Actual D3D11 device execution and performance profiling still require a Windows machine with a Direct3D 11-capable adapter.
 
 ## Roadmap
 
-The next major stage is a production renderer: camera frustum culling, Hi-Z occlusion, LOD/HLOD, GPU skeletal skinning, material/mesh batching, shadow-caster culling, transient GPU allocation and GPU timestamp profiling. After that, networking/persistence can be expanded into production MMO shard, interest-management and crash-recovery infrastructure.
+The immediate production renderer stage is GPU Hi-Z generation, camera frustum/occlusion culling, LOD/HLOD, GPU skeletal skinning, material/mesh batching, shadow-caster culling, transient GPU allocation and GPU timestamp profiling. The following MMO stage expands authoritative simulation, interest management, delta snapshots, persistence transactions, shard/zone ownership and crash recovery.

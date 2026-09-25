@@ -1,0 +1,38 @@
+{
+  "schema": "sharnou-engine-project/1",
+  "engine_id": "SharnouEngine",
+  "engine_name": "Sharnou Engine",
+  "canonical_game": {
+    "project_id": "honour-war",
+    "repository": "https://github.com/Sharnou/Honour-War"
+  },
+  "canonical_ide": {
+    "id": "Sharnou-IDE",
+    "repository": "https://github.com/Sharnou/Sharnou-IDE",
+    "authority": "exclusive"
+  },
+  "project_protocol": "Sharnou Project Protocol (SPP)",
+  "ide_migration": {
+    "automatic_conversion": true,
+    "target": "Sharnou-IDE SPP",
+    "legacy_ide_runtime_control": "rejected"
+  },
+  "external_tool_policy": {
+    "network_downloads": false,
+    "external_tool_bootstrap": false,
+    "rejected": ["Visual Studio", "MSBuild", "Windows SDK", "CMake", "vcpkg", "Unity", "Unreal Engine"]
+  },
+  "visual_policy": {
+    "generated_raster_format": ".avif",
+    "accepted_generated_raster_formats": [".avif"],
+    "rejected_generated_raster_formats": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".dds", ".tga"]
+  },
+  "asset_intake": {
+    "models": ["FBX", "OBJ"],
+    "rejected_models": ["GLB", "GLTF"]
+  },
+  "runtime": {
+    "control": "Sharnou-IDE",
+    "commands": ["--self-test", "--runtime-test=300"]
+  }
+}

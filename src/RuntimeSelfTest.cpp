@@ -17,7 +17,7 @@ int main(){
     if(!streaming.resident()){std::cerr<<"Runtime self-test FAILED: async world streaming\n";return 2;}
     if(sizeof(shn::render::CullShader)<=128 || std::string(shn::render::CullShader).find("numthreads") == std::string::npos){std::cerr<<"Runtime self-test FAILED: GPU culling shader contract\n";return 3;}
 
-    float depth[16]={1,1,1,1,1,.7f,.7f,1,1,.7f,.5f,1,1,1,1,1};
+    float depth[16]={.5f,.5f,.5f,.5f,.5f,.7f,.7f,.5f,.5f,.7f,.5f,.5f,.5f,.5f,.5f,.5f};
     shn::render::HiZPyramid hiz; hiz.build(depth,4,4);
     if(hiz.levelCount()!=3 || !hiz.occluded(0,0,1,1,.95f)){std::cerr<<"Runtime self-test FAILED: Hi-Z pyramid\n";return 4;}
 

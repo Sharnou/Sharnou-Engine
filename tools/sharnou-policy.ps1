@@ -22,7 +22,7 @@ Get-ChildItem -LiteralPath $root -Recurse -File -Force -ErrorAction SilentlyCont
     $_.FullName -notmatch "[\\/]\.git[\\/]" -and
     $_.FullName -notmatch "[\\/]legacy[\\/]" -and
     $_.FullName -notmatch "[\\/]tools[\\/]sharnou-policy\.ps1$" -and
-    $_.Name -ne "SHARNOU_IDE_INTEGRATION.json" -and
+    $_.FullName -notmatch "[\\/]toolchain[\\/]sharnou-toolchain\.contract\.json$" -and
     $activeExtensions -contains $_.Extension.ToLowerInvariant()
   } |
   ForEach-Object {
@@ -38,6 +38,6 @@ if(Test-Path $textureDir){
 }
 
 if($violations.Count -gt 0){ $violations | ForEach-Object { Write-Host $_ }; exit 1 }
-Write-Host "PASS: Sharnou Engine is using the Sharnou-only authoring/build policy."
+Write-Host "PASS: Sharnou Engine is using the Sharnou-only authoring/runtime policy."
 Write-Host "PASS: No Visual Studio/MSBuild/Windows SDK/CMake/vcpkg build path is active."
 Write-Host "PASS: AVIF-only texture boundary is enforced."

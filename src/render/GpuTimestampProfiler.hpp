@@ -12,10 +12,11 @@ class GpuTimestampProfiler {
     ComPtr<ID3D11Device> device_; ComPtr<ID3D11DeviceContext> context_;
     ComPtr<ID3D11Query> disjoint_;
     std::vector<Slot> slots_;
+    std::uint32_t capacity_{};
     bool open_{};
 public:
     bool initialize(ID3D11Device* d,ID3D11DeviceContext* c,std::uint32_t maxScopes=64) {
-        if(!d||!c||!maxScopes) return false; device_=d; context_=c; slots_.resize(maxScopes);
+        if(!d||!c||!maxScopes) return false; device_=d; context_=c; capacity_=maxScopes; slots_.clear(); slots_.reserve(maxScopes);
         D3D11_QUERY_DESC q{D3D11_QUERY_TIMESTAMP_DISJOINT,0};
         return SUCCEEDED(device_->CreateQuery(&q,&disjoint_));
     }

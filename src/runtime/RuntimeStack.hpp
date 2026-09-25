@@ -1,0 +1,42 @@
+#pragma once
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <cmath>
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <queue>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+namespace shn::runtime {
+using Entity=std::uint32_t; using NetId=std::uint32_t;
+struct Vec3 { float x{},y{},z{}; };
+inline float dist2(Vec3 a,Vec3 b){float x=a.x-b.x,y=a.y-b.y,z=a.z-b.z;return x*x+y*y+z*z;}
+enum class CellState:std::uint8_t { Unloaded, Loading, Loaded, Unloading };
+struct WorldCell { std::int32_t x{},z{}; CellState state=CellState::Unloaded; std::uint32_t generation{}; };
+class WorldStreamer { std::unordered_map<std::int64_t,WorldCell> cells_; float cellSize_=64.f,loadRadius_=3.f,unloadRadius_=4.f; static std::int64_t key(std::int32_t x,std::int32_t z){return (std::int64_t(x)<<32)^std::uint32_t(z);} public:
+ void configure(float cell,float load,float unload){cellSize_=cell;loadRadius_=load;unloadRadius_=std::max(unload,load);}
+ void update(Vec3 p){int cx=int(std::floor(p.x/cellSize_)),cz=int(std::floor(p.z/cellSize_));for(int z=cz-int(loadRadius_);z<=cz+int(loadRadius_);++z)for(int x=cx-int(loadRadius_);x<=cx+int(loadRadius_);++x){auto &c=cells_[key(x,z)];c.x=x;c.z=z;if(c.state==CellState::Unloaded||c.state==CellState::Unloading){c.state=CellState::Loaded;++c.generation;}}for(auto &[k,c]:cells_)if(c.state==CellState::Loaded&&std::max(std::abs(c.x-cx),std::abs(c.z-cz))>unloadRadius_)c.state=CellState::Unloaded;}
+ std::size_t resident()const{std::size_t n=0;for(auto &[k,c]:cells_)n+=c.state==CellState::Loaded;return n;}
+};
+struct Bounds { Vec3 center{}; float radius=1.f; std::uint32_t mesh{}; }; struct DrawCandidate { std::uint32_t mesh{},instance{}; };
+class CullingSystem { public: std::vector<DrawCandidate> buildVisible(const std::vector<Bounds>& b,Vec3 camera,float maxDistance)const{std::vector<DrawCandidate>o;o.reserve(b.size());float md=maxDistance*maxDistance;for(std::uint32_t i=0;i<b.size();++i)if(dist2(b[i].center,camera)<=md+b[i].radius*b[i].radius)o.push_back({b[i].mesh,i});return o;} };
+struct BonePose { Vec3 position{},scale{1,1,1}; std::array<float,4> rotation{0,0,0,1}; }; struct AnimationClip { std::string name;float duration{};std::vector<std::vector<BonePose>> frames; };
+class AnimationSystem { public: static std::vector<BonePose> sample(const AnimationClip&a,float time,const AnimationClip*b=nullptr,float weight=0){if(a.frames.empty())return{};auto s=[](const AnimationClip&c,float t){std::size_t i=std::min(c.frames.size()-1,std::size_t((t/std::max(.001f,c.duration))*c.frames.size()));return c.frames[i];};auto p=s(a,time);if(!b||weight<=0||b->frames.empty())return p;auto q=s(*b,time);for(std::size_t i=0;i<std::min(p.size(),q.size());++i){p[i].position.x+=(q[i].position.x-p[i].position.x)*weight;p[i].position.y+=(q[i].position.y-p[i].position.y)*weight;p[i].position.z+=(q[i].position.z-p[i].position.z)*weight;}return p;} };
+struct Material { std::string name,avifAlbedo;std::array<float,4> baseColor{1,1,1,1};float metallic{},roughness=.7f; };
+class MaterialRegistry { std::unordered_map<std::string,Material> data_;public:bool add(Material m){if(m.avifAlbedo.size()<5||m.avifAlbedo.substr(m.avifAlbedo.size()-5)!=".avif")return false;return data_.emplace(m.name,std::move(m)).second;}const Material*find(const std::string&n)const{auto i=data_.find(n);return i==data_.end()?nullptr:&i->second;}std::size_t size()const{return data_.size();}};
+class NavigationGrid { int w_,h_;std::vector<std::uint8_t>blocked_;public:NavigationGrid(int w=64,int h=64):w_(w),h_(h),blocked_(std::size_t(w)*h){}void setBlocked(int x,int z,bool v){if(x>=0&&z>=0&&x<w_&&z<h_)blocked_[std::size_t(z)*w_+x]=v;}bool blocked(int x,int z)const{return x<0||z<0||x>=w_||z>=h_||blocked_[std::size_t(z)*w_+x];}std::vector<std::array<int,2>>findPath(int sx,int sz,int tx,int tz)const{if(blocked(sx,sz)||blocked(tx,tz))return{};struct Q{int i;float f;bool operator<(const Q&o)const{return f>o.f;}};std::priority_queue<Q>open;struct N{int x{},z{};float g{},f{};int p=-1;};std::vector<N>n(std::size_t(w_)*h_);std::vector<char>closed(n.size());auto id=[&](int x,int z){return z*w_+x;};auto hh=[&](int x,int z){return float(std::abs(x-tx)+std::abs(z-tz));};int s=id(sx,sz);n[s]={sx,sz,0,hh(sx,sz),-1};open.push({s,n[s].f});const int d[4][2]={{1,0},{-1,0},{0,1},{0,-1}};int goal=-1;while(!open.empty()){int i=open.top().i;open.pop();if(closed[i])continue;closed[i]=1;if(i==id(tx,tz)){goal=i;break;}auto a=n[i];for(auto&v:d){int x=a.x+v[0],z=a.z+v[1];if(blocked(x,z))continue;int j=id(x,z);float g=a.g+1;if(closed[j]||(n[j].p!=-1&&g>=n[j].g))continue;n[j]={x,z,g,g+hh(x,z),i};open.push({j,n[j].f});}}if(goal<0)return{};std::vector<std::array<int,2>>p;for(int i=goal;i>=0;i=n[i].p)p.push_back({n[i].x,n[i].z});std::reverse(p.begin(),p.end());return p;}};
+struct Body { Vec3 position{},velocity{};float radius=.5f,mass=1.f;bool dynamic=true; };
+class PhysicsWorld { std::unordered_map<Entity,Body>bodies_;Vec3 gravity_{0,-19.62f,0};public:void add(Entity e,Body b){bodies_[e]=b;}void remove(Entity e){bodies_.erase(e);}Body*get(Entity e){auto i=bodies_.find(e);return i==bodies_.end()?nullptr:&i->second;}void step(float dt){for(auto&[e,b]:bodies_)if(b.dynamic){b.velocity.y+=gravity_.y*dt;b.position.x+=b.velocity.x*dt;b.position.y+=b.velocity.y*dt;b.position.z+=b.velocity.z*dt;if(b.position.y<b.radius){b.position.y=b.radius;if(b.velocity.y<0)b.velocity.y*=-.25f;}}}std::size_t size()const{return bodies_.size();}};
+struct NetTransform { NetId id{};Vec3 position{};std::uint32_t revision{}; };struct Snapshot {std::uint32_t tick{};std::vector<NetTransform>entities;};
+class ReplicationServer {std::unordered_map<NetId,NetTransform>state_;std::uint32_t revision_{};public:void upsert(NetTransform n){n.revision=++revision_;state_[n.id]=n;}Snapshot snapshot(Vec3 o,float radius)const{Snapshot s;float r2=radius*radius;for(auto&[id,n]:state_)if(dist2(o,n.position)<=r2)s.entities.push_back(n);return s;}std::size_t entities()const{return state_.size();}};
+struct SaveHeader {std::uint32_t magic=0x53484E31;std::uint16_t version=1;std::uint16_t reserved{};std::uint32_t count{};};
+class Persistence {public:static bool save(const std::filesystem::path&p,const std::vector<NetTransform>&v){std::ofstream f(p,std::ios::binary);if(!f)return false;SaveHeader h{0x53484E31,1,0,(std::uint32_t)v.size()};f.write((char*)&h,sizeof h);if(!v.empty())f.write((char*)v.data(),std::streamsize(v.size()*sizeof(NetTransform)));return bool(f);}static bool load(const std::filesystem::path&p,std::vector<NetTransform>&v){std::ifstream f(p,std::ios::binary);SaveHeader h{};if(!f.read((char*)&h,sizeof h)||h.magic!=0x53484E31||h.version!=1||h.count>10000000)return false;v.resize(h.count);return h.count==0||bool(f.read((char*)v.data(),std::streamsize(v.size()*sizeof(NetTransform))));}};
+struct RuntimeMetrics {std::atomic<std::uint64_t>frames{},physicsSteps{},replicationSnapshots{};};class Tooling {RuntimeMetrics metrics_;public:RuntimeMetrics&metrics(){return metrics_;}std::string summary()const{return "Sharnou Engine runtime metrics";}};
+class DedicatedServer {ReplicationServer replication_;PhysicsWorld physics_;NavigationGrid nav_;Tooling tooling_;std::atomic<bool>running_{};public:void start(){running_=true;}void stop(){running_=false;}bool running()const{return running_;}void tick(float dt){if(!running_)return;physics_.step(dt);++tooling_.metrics().physicsSteps;}ReplicationServer&replication(){return replication_;}PhysicsWorld&physics(){return physics_;}NavigationGrid&navigation(){return nav_;}Tooling&tooling(){return tooling_;}};
+struct RuntimeStack {WorldStreamer streaming;CullingSystem culling;AnimationSystem animation;MaterialRegistry materials;NavigationGrid navigation{128,128};PhysicsWorld physics;ReplicationServer replication;Tooling tooling;DedicatedServer server;};
+inline bool RunRuntimeSelfTest(){RuntimeStack r;r.streaming.configure(64,2,3);r.streaming.update({0,0,0});if(!r.streaming.resident())return false;if(!r.materials.add({"hero","assets/textures/hero.avif",{1,1,1,1},0,.7f}))return false;if(r.materials.add({"bad","assets/textures/hero.png",{1,1,1,1},0,.7f}))return false;if(r.navigation.findPath(0,0,8,8).empty())return false;r.physics.add(1,{{0,2,0},{0,0,0},.5f,1,true});r.physics.step(1.f/60);r.replication.upsert({7,{0,0,0},0});return !r.replication.snapshot({0,0,0},10).entities.empty();}
+}

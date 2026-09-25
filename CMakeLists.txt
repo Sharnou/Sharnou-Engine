@@ -1,60 +1,39 @@
 cmake_minimum_required(VERSION 3.25)
-
-project(SharnouEngine VERSION 0.1.0 LANGUAGES CXX)
-
+project(SharnouEngine VERSION 0.2.0 LANGUAGES CXX)
 if(NOT WIN32)
     message(FATAL_ERROR "Sharnou Engine is Windows 10-only.")
 endif()
-
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(FATAL_ERROR "Sharnou Engine requires a 64-bit Windows target.")
 endif()
-
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
-
 find_package(libavif CONFIG REQUIRED)
 
-add_executable(SharnouEngine WIN32
-    src/SharnouEngine.cpp
-)
+add_library(SharnouRuntime INTERFACE)
+target_include_directories(SharnouRuntime INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_definitions(SharnouRuntime INTERFACE _WIN32_WINNT=0x0A00 WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
+target_compile_features(SharnouRuntime INTERFACE cxx_std_23)
 
-target_compile_definitions(SharnouEngine PRIVATE
-    _WIN32_WINNT=0x0A00
-    WIN32_LEAN_AND_MEAN
-    NOMINMAX
-    UNICODE
-    _UNICODE
-)
+add_executable(SharnouEngine WIN32 src/SharnouEngine.cpp)
+target_link_libraries(SharnouEngine PRIVATE SharnouRuntime avif d3d11 dxgi d3dcompiler user32)
 
-if(MSVC)
-    target_compile_options(SharnouEngine PRIVATE
-        /std:c++latest
-        /W4
-        /WX-
-        /permissive-
-        /EHsc
-        /utf-8
-        /O2
-        /GL
-    )
-    target_link_options(SharnouEngine PRIVATE
-        /LTCG
-        /OPT:REF
-        /OPT:ICF
-    )
-endif()
+add_executable(SharnouRuntimeSelfTest src/RuntimeSelfTest.cpp)
+target_link_libraries(SharnouRuntimeSelfTest PRIVATE SharnouRuntime)
 
-target_link_libraries(SharnouEngine PRIVATE
-    avif
-    d3d11
-    dxgi
-    d3dcompiler
-    user32
-)
+add_executable(SharnouDedicatedServer src/server/SharnouServer.cpp)
+target_link_libraries(SharnouDedicatedServer PRIVATE SharnouRuntime)
 
-set_target_properties(SharnouEngine PROPERTIES
-    OUTPUT_NAME "SharnouEngine"
-)
+foreach(target SharnouEngine SharnouRuntimeSelfTest SharnouDedicatedServer)
+    target_compile_definitions(${target} PRIVATE _WIN32_WINNT=0x0A00 WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /std:c++latest /W4 /WX- /permissive- /EHsc /utf-8 /O2 /GL)
+        target_link_options(${target} PRIVATE /LTCG /OPT:REF /OPT:ICF)
+    endif()
+endforeach()
+
+set_target_properties(SharnouEngine PROPERTIES OUTPUT_NAME "SharnouEngine")
+set_target_properties(SharnouRuntimeSelfTest PROPERTIES OUTPUT_NAME "SharnouRuntimeSelfTest")
+set_target_properties(SharnouDedicatedServer PROPERTIES OUTPUT_NAME "SharnouDedicatedServer")

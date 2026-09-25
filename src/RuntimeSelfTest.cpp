@@ -7,6 +7,8 @@
 #include "render/GpuSkinning.hpp"
 #include "render/ShadowCulling.hpp"
 #include "render/TransientGpuAllocator.hpp"
+#include "render/GpuTimestampProfiler.hpp"
+#include "render/ProductionGpuVisibility.hpp"
 #include "world/AsyncWorldStreaming.hpp"
 #include "world/StreamingUploadQueue.hpp"
 #include "gameplay/CharacterMotor.hpp"
@@ -34,8 +36,11 @@ int main(){
     shn::render::LODSelector lod; if(lod.select(10)!=shn::render::LOD::Ultra || lod.select(500)!=shn::render::LOD::Culled){std::cerr<<"Runtime self-test FAILED: LOD selection\n";return 9;}
     shn::render::MaterialBatcher batcher; auto batches=batcher.build({{1,2,0,1},{1,2,1,2},{2,2,0,3}}); if(batches.size()!=2){std::cerr<<"Runtime self-test FAILED: material batching\n";return 10;}
     if(shn::render::SkinningShader.find("numthreads") == std::string_view::npos || shn::render::SkinningShader.find("Bones") == std::string_view::npos){std::cerr<<"Runtime self-test FAILED: GPU skinning shader\n";return 11;}
-    shn::render::ShadowCuller shadow; auto shadowIds=shadow.visible(fr,{{4,0,0,0,1},{5,-4,0,0,1}}); if(shadowIds.size()!=1 || shadowIds[0]!=4){std::cerr<<"Runtime self-test FAILED: shadow culling\n";return 12;}
-    shn::render::TransientGpuAllocator arena(4096); auto a=arena.allocate(256), b=arena.allocate(512); if(a.size!=256 || b.size!=512 || arena.used()==0){std::cerr<<"Runtime self-test FAILED: transient GPU allocator\n";return 13;}
+    if(std::string_view(shn::render::ProductionVisibilityShader).find("InterlockedAdd") == std::string_view::npos || std::string_view(shn::render::ProductionVisibilityShader).find("HiZ.SampleLevel") == std::string_view::npos){std::cerr<<"Runtime self-test FAILED: production GPU visibility shader\n";return 12;}
+    if(sizeof(shn::render::VisibilityConstants)%16!=0){std::cerr<<"Runtime self-test FAILED: GPU visibility constant-buffer alignment\n";return 13;}
+    shn::render::ShadowCuller shadow; auto shadowIds=shadow.visible(fr,{{4,0,0,0,1},{5,-4,0,0,1}}); if(shadowIds.size()!=1 || shadowIds[0]!=4){std::cerr<<"Runtime self-test FAILED: shadow culling\n";return 14;}
+    shn::render::TransientGpuAllocator arena(4096); auto a=arena.allocate(256), b=arena.allocate(512); if(a.size!=256 || b.size!=512 || arena.used()==0){std::cerr<<"Runtime self-test FAILED: transient GPU allocator\n";return 15;}
+    shn::render::GpuTimestampProfiler profiler; if(!std::is_same_v<decltype(profiler.collect()),std::vector<shn::render::GpuTiming>>){std::cerr<<"Runtime self-test FAILED: GPU profiler API\n";return 16;}
     std::cout<<"Runtime self-test PASSED: world streaming, GPU culling, Hi-Z, frame graph, frustum/LOD, batching, GPU skinning, shadows, transient GPU allocation, character motor, animation, AVIF materials, navigation, physics, replication and persistence contracts loaded.\n";
     return 0;
 }

@@ -15,6 +15,7 @@
 #include <chrono>
 #include <iostream>
 #include <string>
+#include <type_traits>
 #include <thread>
 
 int main(){

@@ -1,0 +1,22 @@
+{
+  "schema": "sharnou-toolchain-contract/1",
+  "name": "Sharnou Toolchain",
+  "project": "honour-war",
+  "platform": "Windows 10 x64",
+  "owner": "Sharnou Engine",
+  "authoring": "Sharnou-IDE",
+  "external_downloads": false,
+  "external_ide_required": false,
+  "forbidden": ["Visual Studio", "MSBuild", "Windows SDK", "CMake", "vcpkg", "Unity", "Unreal Engine"],
+  "compiler": {
+    "source": "self-contained Sharnou toolchain",
+    "required": true,
+    "download_if_missing": false,
+    "fail_closed_if_missing": true
+  },
+  "runtime": {
+    "graphics": "Direct3D 11 runtime on Windows 10",
+    "asset_textures": ".AVIF only"
+  },
+  "status": "contract-first; compiler binaries are not downloaded automatically"
+}

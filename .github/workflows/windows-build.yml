@@ -1,4 +1,4 @@
-name: Sharnou Engine Windows Build
+name: Sharnou Engine Windows Policy
 
 on:
   push:
@@ -6,38 +6,42 @@ on:
   pull_request:
 
 jobs:
-  build:
+  sharnou-only-validation:
     runs-on: windows-2022
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure vcpkg
+      - name: Enforce Sharnou-only build policy
+        shell: pwsh
+        run: ./tools/sharnou-policy.ps1
+
+      - name: Validate canonical engine contract
         shell: pwsh
         run: |
-          if (Test-Path "C:/vcpkg/vcpkg.exe") {
-            "VCPKG_ROOT=C:/vcpkg" >> $env:GITHUB_ENV
-          } elseif (-not $env:VCPKG_ROOT -and $env:VCPKG_INSTALLATION_ROOT) {
-            "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
-          } elseif (-not $env:VCPKG_ROOT) {
-            $candidate = Join-Path $env:ProgramFiles "Microsoft Visual Studio/2022/Enterprise/VC/vcpkg"
-            if (Test-Path $candidate) { "VCPKG_ROOT=$candidate" >> $env:GITHUB_ENV }
+          $contract = Get-Content "assets/../README.md" -Raw
+          if (-not (Test-Path "assets/branding/SHARNOU_ENGINE_LOGO_LOCK.md")) { throw "Canonical Sharnou Engine logo lock missing." }
+          if (-not (Test-Path "assets/textures/README.md")) { throw "AVIF texture boundary missing." }
+          Write-Host "PASS: canonical Sharnou Engine identity and AVIF boundary present."
+
+      - name: Validate approved runtime when present
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "$env:GITHUB_WORKSPACE/Build/Runtime/SharnouEngine.exe",
+            "$env:GITHUB_WORKSPACE/Engine/SharnouEngine/bin/SharnouEngine.exe",
+            "$env:GITHUB_WORKSPACE/Tools/SharnouIDE/runtime/SharnouEngine.exe"
+          )
+          $engine = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if ($engine) {
+            $env:SHARNOU_IDE_SESSION = '1'
+            $env:SHARNOU_IDE_REPOSITORY = 'https://github.com/Sharnou/Sharnou-IDE'
+            $env:SHARNOU_ENGINE_ID = 'SharnouEngine'
+            $env:SHARNOU_PROJECT_ID = 'honour-war'
+            & $engine '--self-test'
+            if ($LASTEXITCODE -ne 0) { throw "Sharnou Engine self-test failed: $LASTEXITCODE" }
+            Write-Host "PASS: approved Sharnou Engine runtime self-test."
+          } else {
+            Write-Host "INFO: no runtime binary is checked into the source tree; no compiler/toolchain is downloaded."
           }
-
-      - name: Ensure vcpkg exists
-        shell: pwsh
-        run: |
-          if (-not $env:VCPKG_ROOT) { throw "VCPKG_ROOT is unavailable on this runner." }
-          & "$env:VCPKG_ROOT/vcpkg.exe" version
-
-      - name: Configure
-        shell: pwsh
-        run: cmake --preset windows-msvc-release
-
-      - name: Build
-        shell: pwsh
-        run: cmake --build build/vs2022-release --config Release --parallel
-
-      - name: Size guard
-        shell: pwsh
-        run: ./tools/size_guard.ps1

@@ -2,6 +2,10 @@
 
 Sharnou Engine is a Windows 10 x64 native C++23 engine foundation for a 3D HD MMORPG/ARPG. Its design goal is a much smaller, specialized runtime than general-purpose engines, while concentrating performance engineering on ECS data locality, bounded concurrency, GPU-driven rendering, asynchronous world streaming, fast startup, Direct3D 11, and AVIF-only texture assets.
 
+## Canonical Engine Branding
+
+The approved Sharnou Engine emblem is permanently locked as the original engine logo. See [SHARNOU_ENGINE_LOGO_LOCK.md](assets/branding/SHARNOU_ENGINE_LOGO_LOCK.md) for the branding contract.
+
 ## Fixed platform
 
 - Operating system: Windows 10 x64 only

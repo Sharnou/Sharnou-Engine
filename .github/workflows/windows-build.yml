@@ -20,10 +20,12 @@ jobs:
       - name: Validate canonical engine contract
         shell: pwsh
         run: |
-          $contract = Get-Content "assets/../README.md" -Raw
           if (-not (Test-Path "assets/branding/SHARNOU_ENGINE_LOGO_LOCK.md")) { throw "Canonical Sharnou Engine logo lock missing." }
           if (-not (Test-Path "assets/textures/README.md")) { throw "AVIF texture boundary missing." }
+          if (-not (Test-Path "toolchain/sharnou-toolchain.contract.json")) { throw "Sharnou toolchain contract missing." }
+          if (-not (Test-Path "SHARNOU_IDE_INTEGRATION.json")) { throw "Sharnou IDE integration contract missing." }
           Write-Host "PASS: canonical Sharnou Engine identity and AVIF boundary present."
+          Write-Host "PASS: Sharnou IDE and Sharnou toolchain contracts present."
 
       - name: Validate approved runtime when present
         shell: pwsh

@@ -1,0 +1,13 @@
+{
+  "name": "sharnou-engine",
+  "version-semver": "0.1.0",
+  "description": "Windows 10 C++23 3D HD MMORPG/ARPG engine foundation with AVIF-only texture assets.",
+  "dependencies": [
+    {
+      "name": "libavif",
+      "features": [
+        "dav1d"
+      ]
+    }
+  ]
+}

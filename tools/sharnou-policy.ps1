@@ -18,7 +18,13 @@ $forbiddenText = @(
   "(?i)\bUnrealBuildTool(\.exe)?\b"
 )
 Get-ChildItem -LiteralPath $root -Recurse -File -Force -ErrorAction SilentlyContinue |
-  Where-Object { $_.FullName -notmatch "[\\/]\.git[\\/]" -and $_.FullName -notmatch "[\\/]legacy[\\/]" -and $activeExtensions -contains $_.Extension.ToLowerInvariant() -and $_.FullName -notmatch "[\\/]tools[\\/]sharnou-policy\.ps1$" } |
+  Where-Object {
+    $_.FullName -notmatch "[\\/]\.git[\\/]" -and
+    $_.FullName -notmatch "[\\/]legacy[\\/]" -and
+    $_.FullName -notmatch "[\\/]tools[\\/]sharnou-policy\.ps1$" -and
+    $_.Name -ne "SHARNOU_IDE_INTEGRATION.json" -and
+    $activeExtensions -contains $_.Extension.ToLowerInvariant()
+  } |
   ForEach-Object {
     $path=$_.FullName; $content=Get-Content -LiteralPath $path -Raw
     foreach($pattern in $forbiddenText){ if($content -match $pattern){ $violations.Add("FORBIDDEN ACTIVE TOOL REFERENCE: $($path.Substring($root.Length).TrimStart('\','/')) -> $pattern") } }

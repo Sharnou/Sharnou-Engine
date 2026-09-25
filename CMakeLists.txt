@@ -48,7 +48,7 @@ if(MSVC)
 endif()
 
 target_link_libraries(SharnouEngine PRIVATE
-    libavif::libavif
+    avif
     d3d11
     dxgi
     d3dcompiler

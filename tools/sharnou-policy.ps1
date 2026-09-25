@@ -17,12 +17,17 @@ $forbiddenText = @(
   "(?i)\bUnity(\.exe)?\b",
   "(?i)\bUnrealBuildTool(\.exe)?\b"
 )
+$declarativePolicyFiles = @(
+  "SHARNOU_IDE_INTEGRATION.json",
+  "toolchain/sharnou-toolchain.contract.json"
+)
 Get-ChildItem -LiteralPath $root -Recurse -File -Force -ErrorAction SilentlyContinue |
   Where-Object {
+    $relative = $_.FullName.Substring($root.Length).TrimStart('\','/')
     $_.FullName -notmatch "[\\/]\.git[\\/]" -and
     $_.FullName -notmatch "[\\/]legacy[\\/]" -and
     $_.FullName -notmatch "[\\/]tools[\\/]sharnou-policy\.ps1$" -and
-    $_.FullName -notmatch "[\\/]toolchain[\\/]sharnou-toolchain\.contract\.json$" -and
+    $declarativePolicyFiles -notcontains $relative -and
     $activeExtensions -contains $_.Extension.ToLowerInvariant()
   } |
   ForEach-Object {

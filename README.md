@@ -87,4 +87,4 @@ The engineering target is a runtime package below 1 GiB. The repository contains
 
 ## Roadmap
 
-The immediate production renderer stage is GPU Hi-Z generation, camera frustum/occlusion culling, LOD/HLOD, GPU skeletal skinning, material/mesh batching, shadow-caster culling, transient GPU allocation and GPU timestamp profiling. The following MMO stage expands authoritative simulation, interest management, delta snapshots, persistence transactions, shard/zone ownership and crash recovery.
+The immediate production renderer stage now has real GPU Hi-Z generation, integrated GPU frustum/occlusion/LOD classification, five per-LOD indirect argument groups, GPU timestamp-query profiling, and an explicit streaming-to-GPU boundary. The MMO stage now includes shard routing and distance-based interest deltas in `src/net/MMOShardRuntime.hpp`; the next networking layers are transport, authentication/session ownership, reliable/unreliable channels, prediction/reconciliation, zone handoff, persistence transactions and crash recovery.

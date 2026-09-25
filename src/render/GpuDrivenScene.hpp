@@ -43,13 +43,13 @@ public:
         b.ByteWidth=sizeof(FrameConstants);b.BindFlags=D3D11_BIND_CONSTANT_BUFFER;b.MiscFlags=0;if(FAILED(device_->CreateBuffer(&b,nullptr,&constants_))){error="Culling constant buffer creation failed.";return false;} return true;
     }
     bool uploadInstances(const std::vector<GpuInstance>& data){if(!context_||!instances_||data.empty()||data.size()>capacity_)return false;context_->UpdateSubresource(instances_.Get(),0,nullptr,data.data(),0,0);return true;}
-    void dispatchCull(const float* viewProj,const float* camera,float maxDistance,std::uint32_t indexCount){
-        if(!ready())return; FrameConstants c{};for(int i=0;i<16;++i)c.viewProj[i]=viewProj?viewProj[i]:(i%5==0?1.f:0.f);c.count=capacity_;c.maxDistance=maxDistance;if(camera){c.camera[0]=camera[0];c.camera[1]=camera[1];c.camera[2]=camera[2];}
+    void dispatchCull(const float* viewProj,const float* camera,float maxDistance,std::uint32_t count,std::uint32_t indexCount){
+        if(!ready()||count>capacity_)return; FrameConstants c{};for(int i=0;i<16;++i)c.viewProj[i]=viewProj?viewProj[i]:(i%5==0?1.f:0.f);c.count=count;c.maxDistance=maxDistance;if(camera){c.camera[0]=camera[0];c.camera[1]=camera[1];c.camera[2]=camera[2];}
         const std::uint32_t args[5]={indexCount,0,0,0,0};context_->UpdateSubresource(constants_.Get(),0,nullptr,&c,0,0);context_->UpdateSubresource(args_.Get(),0,nullptr,args,0,0);
-        ID3D11ShaderResourceView* srvs[]={instanceSrv_.Get()};ID3D11UnorderedAccessView* uavs[]={visibleUav_.Get(),argsUav_.Get()};context_->CSSetShader(cullShader_.Get(),nullptr,0);context_->CSSetShaderResources(0,1,srvs);context_->CSSetUnorderedAccessViews(0,2,uavs,nullptr);context_->CSSetConstantBuffers(0,1,constants_.GetAddressOf());context_->Dispatch((capacity_+63)/64,1,1);
+        ID3D11ShaderResourceView* srvs[]={instanceSrv_.Get()};ID3D11UnorderedAccessView* uavs[]={visibleUav_.Get(),argsUav_.Get()};context_->CSSetShader(cullShader_.Get(),nullptr,0);context_->CSSetShaderResources(0,1,srvs);context_->CSSetUnorderedAccessViews(0,2,uavs,nullptr);context_->CSSetConstantBuffers(0,1,constants_.GetAddressOf());context_->Dispatch((count+63)/64,1,1);
         ID3D11UnorderedAccessView* nullUav[2]={nullptr,nullptr};ID3D11ShaderResourceView* nullSrv[1]={nullptr};context_->CSSetUnorderedAccessViews(0,2,nullUav,nullptr);context_->CSSetShaderResources(0,1,nullSrv);context_->CSSetShader(nullptr,nullptr,0);
     }
-    void drawIndirect(ID3D11DeviceContext* context,std::uint32_t stride=0){if(context&&args_)context->DrawIndexedInstancedIndirect(args_.Get(),0);(void)stride;}
+    void drawIndirect(ID3D11DeviceContext* context){if(context&&args_)context->DrawIndexedInstancedIndirect(args_.Get(),0);}
     bool ready() const noexcept{return cullShader_&&instances_&&visible_&&args_&&constants_;}
     std::uint32_t capacity() const noexcept{return capacity_;}
 };

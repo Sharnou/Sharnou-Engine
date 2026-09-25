@@ -15,15 +15,13 @@ jobs:
       - name: Configure vcpkg
         shell: pwsh
         run: |
-          if (-not $env:VCPKG_ROOT -and $env:VCPKG_INSTALLATION_ROOT) {
+          if (Test-Path "C:/vcpkg/vcpkg.exe") {
+            "VCPKG_ROOT=C:/vcpkg" >> $env:GITHUB_ENV
+          } elseif (-not $env:VCPKG_ROOT -and $env:VCPKG_INSTALLATION_ROOT) {
             "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
-          }
-          if (-not $env:VCPKG_ROOT) {
+          } elseif (-not $env:VCPKG_ROOT) {
             $candidate = Join-Path $env:ProgramFiles "Microsoft Visual Studio/2022/Enterprise/VC/vcpkg"
             if (Test-Path $candidate) { "VCPKG_ROOT=$candidate" >> $env:GITHUB_ENV }
-          }
-          if (-not $env:VCPKG_ROOT -and (Test-Path "C:/vcpkg/vcpkg.exe")) {
-            "VCPKG_ROOT=C:/vcpkg" >> $env:GITHUB_ENV
           }
 
       - name: Ensure vcpkg exists

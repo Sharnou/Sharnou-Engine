@@ -45,6 +45,10 @@ All newly generated or converted raster textures/visuals use `.avif` only. Histo
 
 See `SHARNOU_IDE_INTEGRATION.json` for the machine-readable integration contract.
 
+## Asset format strategy
+
+The runtime asset strategy is now split by role: glTF 2.x (.gltf/.glb) carries 3D scene/model structure, KTX2 (.ktx2) carries shipped GPU-facing 3D material textures, and AVIF (.avif) carries UI/2D/distribution imagery. glTF assets using Basis Universal textures use the Khronos KHR_texture_basisu extension. FBX/OBJ remain authoring/interchange inputs and are converted before runtime packaging. This format split reduces duplicate texture representations while keeping the runtime asset roles explicit.
+
 ## Validation
 
 The authoritative validation sequence is:

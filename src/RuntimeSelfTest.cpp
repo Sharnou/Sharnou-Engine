@@ -70,12 +70,12 @@ int main(){
         std::cerr<<"Runtime self-test FAILED: KTX2 header validation\\n"; return 18;
     }
     shn::runtime::MaterialRegistry materials;
-    if(!materials.add({"hero_3d","hero.avif","hero_basecolor.ktx2"}) ||
-       !materials.add({"ui_2d","ui/login.avif",""}) ||
-       materials.add({"invalid","hero.png",""})){
+    if(!materials.add({"hero_3d","", "hero_basecolor.ktx2", shn::runtime::MaterialKind::Material3D}) ||
+       !materials.add({"ui_2d","ui/login.avif","", shn::runtime::MaterialKind::Sprite2D}) ||
+       materials.add({"invalid","hero.png","", shn::runtime::MaterialKind::Sprite2D})){
         std::cerr<<"Runtime self-test FAILED: KTX2/AVIF material registry\\n"; return 19;
     }
-    shn::net::MMOShardRuntime shards(4); shards.connect(1,0,0,0,0,100); shards.upsert({1,10,0,0,1}); shards.upsert({2,500,0,0,1}); const auto deltas=shards.shardFor(1).snapshot(1); if(deltas.size()!=1 || deltas[0].id!=1){std::cerr<<"Runtime self-test FAILED: MMO shard interest\n";return 19;}
+    shn::net::MMOShardRuntime shards(4); shards.connect(1,0,0,0,0,100); shards.upsert({1,10,0,0,1}); shards.upsert({2,500,0,0,1}); const auto deltas=shards.shardFor(1).snapshot(1); if(deltas.size()!=1 || deltas[0].id!=1){std::cerr<<"Runtime self-test FAILED: MMO shard interest\n";return 20;}
     std::cout<<"Runtime self-test PASSED: world streaming, GPU culling, Hi-Z, frame graph, frustum/LOD, batching, GPU skinning, shadows, transient GPU allocation, character motor, MMO shard interest, animation, AVIF 2D materials, KTX2 3D textures, glTF runtime containers, navigation, physics, replication and persistence contracts loaded.\n";
     return 0;
 }

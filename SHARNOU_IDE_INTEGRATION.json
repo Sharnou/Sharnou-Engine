@@ -1,5 +1,5 @@
 {
-  "schema": "sharnou-engine-project/1",
+  "schema": "sharnou-engine-project/2",
   "engine_id": "SharnouEngine",
   "engine_name": "Sharnou Engine",
   "canonical_game": {
@@ -22,14 +22,18 @@
     "external_tool_bootstrap": false,
     "rejected": ["Visual Studio", "MSBuild", "Windows SDK", "CMake", "vcpkg", "Unity", "Unreal Engine"]
   },
-  "visual_policy": {
-    "generated_raster_format": ".avif",
-    "accepted_generated_raster_formats": [".avif"],
-    "rejected_generated_raster_formats": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".dds", ".tga"]
-  },
-  "asset_intake": {
-    "models": ["FBX", "OBJ"],
-    "rejected_models": ["GLB", "GLTF"]
+  "asset_format_policy": {
+    "scene_containers": [".gltf", ".glb"],
+    "scene_container_standard": "glTF 2.x",
+    "three_d_texture_container": ".ktx2",
+    "three_d_texture_standard": "KTX 2.0",
+    "three_d_texture_glTF_extension": "KHR_texture_basisu",
+    "two_d_visual_format": ".avif",
+    "two_d_visual_uses": ["UI", "2D art", "menu backgrounds", "skyboxes", "distribution images"],
+    "source_model_intake": [".fbx", ".obj"],
+    "shipped_source_models": false,
+    "rejected_texture_formats": [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".dds", ".tga"],
+    "rejected_runtime_model_formats": [".fbx", ".obj", ".blend"]
   },
   "runtime": {
     "control": "Sharnou-IDE",

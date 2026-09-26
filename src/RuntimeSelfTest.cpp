@@ -1,4 +1,6 @@
 #include "runtime/RuntimeStack.hpp"
+#include "asset/AssetFormatPolicy.hpp"
+#include "asset/Ktx2Container.hpp"
 #include "render/GpuDrivenScene.hpp"
 #include "render/HiZOcclusion.hpp"
 #include "render/RenderFrameGraph.hpp"
@@ -50,6 +52,21 @@ int main(){
     shn::render::TransientGpuAllocator arena(4096); auto a=arena.allocate(256), b=arena.allocate(512); if(a.size!=256 || b.size!=512 || arena.used()==0){std::cerr<<"Runtime self-test FAILED: transient GPU allocator\n";return 15;}
     static_assert(std::is_same_v<decltype(std::declval<shn::render::GpuTimestampProfiler>().collect()),std::vector<shn::render::GpuTiming>>);
     shn::render::GpuTimestampProfiler profiler;
+    if(shn::asset::classify("hero.gltf") != shn::asset::AssetRole::Scene3D ||
+       shn::asset::classify("hero.glb") != shn::asset::AssetRole::Scene3D ||
+       shn::asset::classify("hero_albedo.ktx2") != shn::asset::AssetRole::Texture3D ||
+       shn::asset::classify("ui/login.avif") != shn::asset::AssetRole::Raster2D ||
+       shn::asset::classify("source/hero.fbx") != shn::asset::AssetRole::SourceModel ||
+       shn::asset::classify("legacy.dds") != shn::asset::AssetRole::Unknown){
+        std::cerr<<"Runtime self-test FAILED: asset format policy\\n"; return 17;
+    }
+    std::array<std::uint8_t,80> ktx2{};
+    for(std::size_t i=0;i<12;++i) ktx2[i]=shn::asset::Ktx2Identifier[i];
+    ktx2[20]=1; ktx2[40]=1;
+    ktx2[24]=1; ktx2[28]=1;
+    if(!shn::asset::hasValidKtx2Header(ktx2)){
+        std::cerr<<"Runtime self-test FAILED: KTX2 header validation\\n"; return 18;
+    }
     shn::net::MMOShardRuntime shards(4); shards.connect(1,0,0,0,0,100); shards.upsert({1,10,0,0,1}); shards.upsert({2,500,0,0,1}); const auto deltas=shards.shardFor(1).snapshot(1); if(deltas.size()!=1 || deltas[0].id!=1){std::cerr<<"Runtime self-test FAILED: MMO shard interest\n";return 17;}
     std::cout<<"Runtime self-test PASSED: world streaming, GPU culling, Hi-Z, frame graph, frustum/LOD, batching, GPU skinning, shadows, transient GPU allocation, character motor, MMO shard interest, animation, AVIF materials, navigation, physics, replication and persistence contracts loaded.\n";
     return 0;

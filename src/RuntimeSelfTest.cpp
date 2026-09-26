@@ -15,6 +15,8 @@
 #include "world/StreamingUploadQueue.hpp"
 #include "gameplay/CharacterMotor.hpp"
 #include "net/MMOShardRuntime.hpp"
+#include <array>
+#include <cstdint>
 #include <chrono>
 #include <iostream>
 #include <string>
@@ -67,7 +69,7 @@ int main(){
     if(!shn::asset::hasValidKtx2Header(ktx2)){
         std::cerr<<"Runtime self-test FAILED: KTX2 header validation\\n"; return 18;
     }
-    shn::net::MMOShardRuntime shards(4); shards.connect(1,0,0,0,0,100); shards.upsert({1,10,0,0,1}); shards.upsert({2,500,0,0,1}); const auto deltas=shards.shardFor(1).snapshot(1); if(deltas.size()!=1 || deltas[0].id!=1){std::cerr<<"Runtime self-test FAILED: MMO shard interest\n";return 17;}
-    std::cout<<"Runtime self-test PASSED: world streaming, GPU culling, Hi-Z, frame graph, frustum/LOD, batching, GPU skinning, shadows, transient GPU allocation, character motor, MMO shard interest, animation, AVIF materials, navigation, physics, replication and persistence contracts loaded.\n";
+    shn::net::MMOShardRuntime shards(4); shards.connect(1,0,0,0,0,100); shards.upsert({1,10,0,0,1}); shards.upsert({2,500,0,0,1}); const auto deltas=shards.shardFor(1).snapshot(1); if(deltas.size()!=1 || deltas[0].id!=1){std::cerr<<"Runtime self-test FAILED: MMO shard interest\n";return 19;}
+    std::cout<<"Runtime self-test PASSED: world streaming, GPU culling, Hi-Z, frame graph, frustum/LOD, batching, GPU skinning, shadows, transient GPU allocation, character motor, MMO shard interest, animation, AVIF 2D materials, KTX2 3D textures, glTF runtime containers, navigation, physics, replication and persistence contracts loaded.\n";
     return 0;
 }

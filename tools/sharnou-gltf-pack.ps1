@@ -15,7 +15,7 @@ function Copy-Gzip([string]$Source,[string]$Destination,[bool]$Compress) {
         $sourceStream = [System.IO.File]::OpenRead($Source)
         $destinationStream = [System.IO.File]::Create($Destination)
         if ($Compress) {
-            $codec = [System.IO.Compression.GZipStream]::new($destinationStream,[System.IO.Compression.CompressionLevel]::SmallestSize,$false)
+            $codec = [System.IO.Compression.GZipStream]::new($destinationStream,[System.IO.Compression.CompressionLevel]::Optimal,$false)
             $sourceStream.CopyTo($codec)
         } else {
             $codec = [System.IO.Compression.GZipStream]::new($sourceStream,[System.IO.Compression.CompressionMode]::Decompress,$false)

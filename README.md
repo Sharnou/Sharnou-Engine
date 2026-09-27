@@ -4,54 +4,34 @@ Sharnou Engine is the canonical custom engine for **Honour War**, a 3D HD MMORPG
 
 ## Permanent integration
 
-**Sharnou-IDE → SPP → SharnouEngine → Honour War**
+**Sharnou-IDE -> SPP -> SharnouEngine -> Honour War**
 
-- Canonical game project: `honour-war`
-- Game repository: `https://github.com/Sharnou/Honour-War`
-- Authoritative IDE: `https://github.com/Sharnou/Sharnou-IDE`
-- Engine ID: `SharnouEngine`
-- Project protocol: Sharnou Project Protocol (SPP)
+- Canonical game project: honour-war
+- Game repository: https://github.com/Sharnou/Honour-War
+- Authoritative IDE: https://github.com/Sharnou/Sharnou-IDE
+- Engine ID: SharnouEngine
 - Movement contract: Ragnarok Online-style click-to-move; no WASD
-- Generated raster visual format: `.avif` only
+- Runtime 3D scenes: .gltf / .glb
+- Runtime 3D textures: .ktx2 using KHR_texture_basisu
+- Runtime 2D/raster visuals: .avif
 
-Sharnou-IDE is the sole project-authoring and runtime-control entry point. Existing IDE/project metadata is migration input and is automatically converted to the Sharnou-IDE SPP contract. Legacy IDEs are not runtime controllers.
+Sharnou-IDE is the sole project-authoring and runtime-control entry point. Existing IDE/project metadata is migration input and is converted to the Sharnou-IDE SPP contract. Legacy IDEs are not runtime controllers.
 
 ## Rejected development dependencies
 
-Honour War/SharnouEngine does not use or bootstrap:
+Honour War/SharnouEngine does not use or bootstrap Visual Studio, MSBuild, Windows SDK development installations, CMake, vcpkg, Unity, Unreal Engine, or automatic external programming-tool downloads.
 
-- Visual Studio
-- MSBuild
-- Windows SDK development installations
-- CMake
-- vcpkg
-- Unity
-- Unreal Engine
-- automatic external programming-tool downloads
-
-No network download is performed to obtain a compiler, SDK, IDE or build system.
+No compiler, SDK, IDE, or build system is downloaded automatically.
 
 ## Runtime-first model
 
 Sharnou-IDE validates the canonical project and engine contracts, compiles SPP authoring data to engine-consumable bytecode, then launches only an already-existing approved SharnouEngine runtime. Runtime evidence must come from the actual executable; static validation is not runtime evidence.
 
-The repository's historical native implementation contains platform-specific renderer/source work from the earlier bootstrap stage. That code is retained as engineering source while the active project control/build policy is migrated to Sharnou-IDE. It must not be used as a reason to restore a rejected IDE or toolchain.
+## Asset roles
 
-## Asset policy
+The IDE intake boundary may accept registered source formats. Canonical runtime delivery uses glTF/GLB for 3D scene/model structure, KTX2 for GPU-facing 3D textures, and AVIF for shipped 2D/raster visuals. FBX/OBJ remain source/interchange inputs and are converted before runtime packaging.
 
-Model intake remains FBX/OBJ. GLB/GLTF is rejected.
-
-All newly generated or converted raster textures/visuals use `.avif` only. Historical reference images are allowed as reference material but are not new generated assets.
-
-See `SHARNOU_IDE_INTEGRATION.json` for the machine-readable integration contract.
-
-## Asset format strategy
-
-The runtime asset strategy is now split by role: glTF 2.x (.gltf/.glb) carries 3D scene/model structure, KTX2 (.ktx2) carries shipped GPU-facing 3D material textures, and AVIF (.avif) carries UI/2D/distribution imagery. glTF assets using Basis Universal textures use the Khronos KHR_texture_basisu extension. FBX/OBJ remain authoring/interchange inputs and are converted before runtime packaging. This format split reduces duplicate texture representations while keeping the runtime asset roles explicit.
-
-## Validation
-
-The authoritative validation sequence is:
+## Validation sequence
 
 1. Sharnou-IDE canonical project identity check.
 2. SPP validation/compilation.

@@ -1,5 +1,5 @@
 {
-  "schema": "sharnou-toolchain-contract/1",
+  "schema": "sharnou-toolchain-contract/2",
   "name": "Sharnou Toolchain",
   "project": "honour-war",
   "platform": "Windows 10 x64",
@@ -16,7 +16,10 @@
   },
   "runtime": {
     "graphics": "Direct3D 11 runtime on Windows 10",
-    "asset_textures": ".AVIF only"
+    "asset_scene_containers": [".gltf", ".glb"],
+    "asset_textures_3d": [".ktx2"],
+    "asset_visuals_2d": [".avif"],
+    "gltf_texture_extension": "KHR_texture_basisu"
   },
   "status": "contract-first; compiler binaries are not downloaded automatically"
 }

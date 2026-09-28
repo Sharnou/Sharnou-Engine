@@ -15,6 +15,9 @@ Write-Host "Engine: SharnouEngine"
 $contract = Join-Path $PSScriptRoot "sharnou-toolchain.contract.json"
 if (!(Test-Path $contract -PathType Leaf)) { throw "Missing Sharnou toolchain contract: $contract" }
 
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "verify-sharnou-toolchain.ps1") -Compiler $Compiler
+if ($LASTEXITCODE -ne 0) { throw "Self-contained Sharnou compiler verification failed: $LASTEXITCODE" }
+
 if ([string]::IsNullOrWhiteSpace($Compiler)) {
     $candidates = @(
         (Join-Path $repo "toolchain\bin\sharnou-cxx.exe"),

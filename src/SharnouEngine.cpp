@@ -314,7 +314,7 @@ class Engine {
     }
 public:
     explicit Engine(HINSTANCE h):instance_(h) {}
-    bool init() {
+    bool init(const std::filesystem::path& scene = {}) {
         WNDCLASSEXW wc{sizeof(wc),CS_OWNDC,wndProc,0,0,instance_,LoadIconW(nullptr,IDI_APPLICATION),LoadCursorW(nullptr,IDC_ARROW),nullptr,L"SHN_ENGINE",nullptr};
         if (!RegisterClassExW(&wc)) return false; RECT r{0,0,static_cast<LONG>(width_),static_cast<LONG>(height_)}; AdjustWindowRect(&r,WS_OVERLAPPEDWINDOW,FALSE);
         window_=CreateWindowExW(0,wc.lpszClassName,L"SharnouEngine | Windows 10 x64 | GFC-inspired 3D MMORPG/ARPG",WS_OVERLAPPEDWINDOW|WS_VISIBLE,CW_USEDEFAULT,CW_USEDEFAULT,r.right-r.left,r.bottom-r.top,nullptr,nullptr,instance_,this);
@@ -354,7 +354,8 @@ public:
     }
 
     int run() {
-        MSG msg{}; std::uint64_t frames=0; double acc=0;\n        while (running_) {
+        MSG msg{}; std::uint64_t frames=0; double acc=0;
+        while (running_) {
             while (PeekMessageW(&msg,nullptr,0,0,PM_REMOVE)) { if (msg.message==WM_QUIT) running_=false; TranslateMessage(&msg); DispatchMessageW(&msg); }
             const auto now=std::chrono::steady_clock::now(); const float dt=std::min(.1f,std::chrono::duration<float>(now-previous_).count()); previous_=now; acc+=dt;
             if ((frames & 3u) == 0u) jobs_.submit([this]{ backgroundTicks_.fetch_add(1,std::memory_order_relaxed); });

@@ -1,6 +1,7 @@
 #include "runtime/RuntimeStack.hpp"
 #include "asset/AssetFormatPolicy.hpp"
 #include "asset/Ktx2Container.hpp"
+#include "asset/RuntimeAssetIntake.hpp"
 #include "render/GpuDrivenScene.hpp"
 #include "render/HiZOcclusion.hpp"
 #include "render/RenderFrameGraph.hpp"
@@ -18,6 +19,8 @@
 #include <array>
 #include <cstdint>
 #include <chrono>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <type_traits>
@@ -67,7 +70,21 @@ int main(){
     ktx2[20]=1; ktx2[40]=1;
     ktx2[24]=1; ktx2[28]=1;
     if(!shn::asset::hasValidKtx2Header(ktx2)){
-        std::cerr<<"Runtime self-test FAILED: KTX2 header validation\\n"; return 18;
+        std::cerr<<"Runtime self-test FAILED: KTX2 header validation\n"; return 18;
+    }
+    {
+        const auto fixture = std::filesystem::temp_directory_path() / "sharnou_runtime_selftest.gltf";
+        const std::string gltf =
+            R"JSON({"asset":{"version":"2.0"},"extensionsUsed":["KHR_texture_basisu"],"scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"mesh":0}],"meshes":[{"primitives":[{"attributes":{"POSITION":0},"indices":1}]}],"buffers":[{"uri":"data:application/octet-stream;base64,AAAAvwAAAAAAAAAAAAAAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIA","byteLength":42}],"images":[{"uri":"../textures/test.ktx2","mimeType":"image/ktx2"}]})JSON";
+        std::ofstream out(fixture, std::ios::binary);
+        out << gltf;
+        out.close();
+        const auto loaded = shn::asset::loadBootstrapGltf(fixture);
+        std::error_code ec;
+        std::filesystem::remove(fixture, ec);
+        if(!loaded.valid || loaded.vertices.size()!=3 || loaded.indices.size()!=3 || loaded.textureKtx2.empty()){
+            std::cerr<<"Runtime self-test FAILED: native glTF runtime intake\n"; return 21;
+        }
     }
     shn::runtime::MaterialRegistry materials;
     if(!materials.add({"hero_3d","", "hero_basecolor.ktx2", shn::runtime::MaterialKind::Material3D}) ||

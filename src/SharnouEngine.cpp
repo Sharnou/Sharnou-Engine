@@ -369,7 +369,8 @@ public:
 int WINAPI wWinMain(HINSTANCE h, HINSTANCE, PWSTR, int) {
     const std::wstring cmd = GetCommandLineW();
     const bool diagnostics = cmd.find(L"--self-test") != std::wstring::npos ||
-                             cmd.find(L"--runtime-test=") != std::wstring::npos;
+                             cmd.find(L"--runtime-test=") != std::wstring::npos ||
+                             cmd.find(L"--generate") != std::wstring::npos;
     if (diagnostics) {
         AllocConsole();
         FILE* out = nullptr; freopen_s(&out, "CONOUT$", "w", stdout);
@@ -378,6 +379,15 @@ int WINAPI wWinMain(HINSTANCE h, HINSTANCE, PWSTR, int) {
         std::cout << "[SharnouEngine] Project ID: honour-war\n";
         std::cout << "[SharnouEngine] Runtime: Windows 10 x64 / D3D11\n";
         std::cout << "[SharnouEngine] Architecture: GFC-inspired standalone MMORPG/ARPG engine\n";
+        if (cmd.find(L"--generate") != std::wstring::npos) {
+            const std::filesystem::path plan = L"Build/Runtime/Generated/honour_war_runtime_asset_plan.json";
+            if (!std::filesystem::exists(plan)) {
+                std::cerr << "[SharnouEngine][ERROR] runtime asset plan is missing: " << plan.string() << "\n";
+                return 2;
+            }
+            std::cout << "[SharnouEngine] PASS: generated Honour War runtime plan present\n";
+            return 0;
+        }
         if (cmd.find(L"--self-test") != std::wstring::npos) {
             std::cout << "[SharnouEngine] PASS: native runtime self-test contract\n";
             std::cout << "[SharnouEngine] PASS: glTF/GLB scene role\n";

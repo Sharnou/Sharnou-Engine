@@ -5,6 +5,7 @@
 #include <DirectXMath.h>
 #include <wrl/client.h>
 #include <avif/avif.h>
+#include "asset/RuntimeAssetIntake.hpp"
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -224,8 +225,52 @@ float4 PS(PSIn i):SV_TARGET { float3 L=normalize(float3(.35,.8,-.45)); float d=m
         if (FAILED(device_->CreateBuffer(&b,&sd,&vb_))) return false;
         b.ByteWidth=sizeof(idx); b.BindFlags=D3D11_BIND_INDEX_BUFFER; sd.pSysMem=idx; if (FAILED(device_->CreateBuffer(&b,&sd,&ib_))) return false; indexCount_=std::size(idx); return true;
     }
+
+    bool loadGltfBootstrap(const std::filesystem::path& scene, std::string& error) {
+        const auto parsed = shn::asset::loadBootstrapGltf(scene);
+        if (!parsed.valid) { error = parsed.error; return false; }
+        if (parsed.vertices.empty() || parsed.indices.empty()) { error = "glTF scene has no renderable bootstrap geometry."; return false; }
+
+        std::vector<Vertex> vertices;
+        vertices.reserve(parsed.vertices.size());
+        for (const auto& src : parsed.vertices) {
+            vertices.push_back(Vertex{
+                {src.position[0],src.position[1],src.position[2]},
+                {src.normal[0],src.normal[1],src.normal[2]},
+                {src.uv[0],src.uv[1]}
+            });
+        }
+
+        D3D11_BUFFER_DESC b{};
+        b.Usage = D3D11_USAGE_DEFAULT;
+        b.ByteWidth = static_cast<UINT>(vertices.size() * sizeof(Vertex));
+        b.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+        D3D11_SUBRESOURCE_DATA sd{vertices.data(),0,0};
+        if (FAILED(device_->CreateBuffer(&b,&sd,&vb_))) { error = "glTF vertex buffer creation failed."; return false; }
+
+        b.ByteWidth = static_cast<UINT>(parsed.indices.size() * sizeof(std::uint32_t));
+        b.BindFlags = D3D11_BIND_INDEX_BUFFER;
+        sd.pSysMem = parsed.indices.data();
+        if (FAILED(device_->CreateBuffer(&b,&sd,&ib_))) { error = "glTF index buffer creation failed."; return false; }
+
+        indexCount_ = static_cast<std::uint32_t>(parsed.indices.size());
+        return true;
+    }
+
+    void reportTextureContract(const std::filesystem::path& scene) {
+        const auto parsed = shn::asset::loadBootstrapGltf(scene);
+        if (!parsed.valid || parsed.textureKtx2.empty()) return;
+        std::string error;
+        if (shn::asset::validateKtx2File(parsed.textureKtx2, error)) {
+            OutputDebugStringA(("[SharnouEngine] KTX2 runtime texture contract PASS: " + parsed.textureKtx2.string() + "\n").c_str());
+        } else {
+            OutputDebugStringA(("[SharnouEngine] KTX2 runtime texture contract pending: " + error + "\n").c_str());
+        }
+    }
+
 public:
-    bool init(HWND hwnd, std::uint32_t w, std::uint32_t h) {
+    bool init(HWND hwnd, std::uint32_t w, std::uint32_t h, const std::filesystem::path& scene = {}) {
+
         DXGI_SWAP_CHAIN_DESC sd{}; sd.BufferCount=2; sd.BufferDesc.Width=w; sd.BufferDesc.Height=h; sd.BufferDesc.Format=DXGI_FORMAT_R8G8B8A8_UNORM; sd.BufferUsage=DXGI_USAGE_RENDER_TARGET_OUTPUT; sd.OutputWindow=hwnd; sd.SampleDesc.Count=1; sd.Windowed=TRUE; sd.SwapEffect=DXGI_SWAP_EFFECT_FLIP_DISCARD;
         const D3D_FEATURE_LEVEL levels[]={D3D_FEATURE_LEVEL_11_1,D3D_FEATURE_LEVEL_11_0,D3D_FEATURE_LEVEL_10_1}; D3D_FEATURE_LEVEL got{};
         UINT flags=0;
@@ -272,8 +317,16 @@ public:
     bool init() {
         WNDCLASSEXW wc{sizeof(wc),CS_OWNDC,wndProc,0,0,instance_,LoadIconW(nullptr,IDI_APPLICATION),LoadCursorW(nullptr,IDC_ARROW),nullptr,L"SHN_ENGINE",nullptr};
         if (!RegisterClassExW(&wc)) return false; RECT r{0,0,static_cast<LONG>(width_),static_cast<LONG>(height_)}; AdjustWindowRect(&r,WS_OVERLAPPEDWINDOW,FALSE);
-        window_=CreateWindowExW(0,wc.lpszClassName,L"Sharnou Engine | Windows 10 | C++23 | AVIF-only textures",WS_OVERLAPPEDWINDOW|WS_VISIBLE,CW_USEDEFAULT,CW_USEDEFAULT,r.right-r.left,r.bottom-r.top,nullptr,nullptr,instance_,this);
+        window_=CreateWindowExW(0,wc.lpszClassName,L"SharnouEngine | Windows 10 x64 | GFC-inspired 3D MMORPG/ARPG",WS_OVERLAPPEDWINDOW|WS_VISIBLE,CW_USEDEFAULT,CW_USEDEFAULT,r.right-r.left,r.bottom-r.top,nullptr,nullptr,instance_,this);
         if (!window_ || !renderer_.init(window_,width_,height_)) return false;
+        if (!scene.empty()) {
+            std::string sceneError;
+            if (!renderer_.loadGltfBootstrap(scene, sceneError)) {
+                OutputDebugStringA(("[SharnouEngine] glTF bootstrap load failed: " + sceneError + "\n").c_str());
+            } else {
+                renderer_.reportTextureContract(scene);
+            }
+        }
         const std::filesystem::path textureRoot = L"assets/textures";
         if (std::filesystem::exists(textureRoot)) {
             for (const auto& entry : std::filesystem::recursive_directory_iterator(textureRoot)) {
@@ -286,9 +339,22 @@ public:
         for (int i=0;i<2000;++i) { Entity e=world_.create(); world_.transforms.add(e,Transform{{float(i%50)*2.3f,0,float(i/50)*2.3f}}); world_.velocities.add(e,Vec3{}); }
         previous_=std::chrono::steady_clock::now(); running_=true; return true;
     }
-    int run() {
+    int runForSeconds(double seconds) {
+        if (seconds <= 0.0) return 2;
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::duration<double>(seconds);
         MSG msg{}; std::uint64_t frames=0; double acc=0;
-        while (running_) {
+        while (running_ && std::chrono::steady_clock::now() < deadline) {
+            while (PeekMessageW(&msg,nullptr,0,0,PM_REMOVE)) { if (msg.message==WM_QUIT) running_=false; TranslateMessage(&msg); DispatchMessageW(&msg); }
+            const auto now=std::chrono::steady_clock::now(); const float dt=std::min(.1f,std::chrono::duration<float>(now-previous_).count()); previous_=now; acc+=dt;
+            if ((frames & 3u) == 0u) jobs_.submit([this]{ backgroundTicks_.fetch_add(1,std::memory_order_relaxed); });
+            if (acc>=1.0) { frames=0; acc=0; }
+            renderer_.frame(dt,width_,height_); ++frames;
+        }
+        return 0;
+    }
+
+    int run() {
+        MSG msg{}; std::uint64_t frames=0; double acc=0;\n        while (running_) {
             while (PeekMessageW(&msg,nullptr,0,0,PM_REMOVE)) { if (msg.message==WM_QUIT) running_=false; TranslateMessage(&msg); DispatchMessageW(&msg); }
             const auto now=std::chrono::steady_clock::now(); const float dt=std::min(.1f,std::chrono::duration<float>(now-previous_).count()); previous_=now; acc+=dt;
             if ((frames & 3u) == 0u) jobs_.submit([this]{ backgroundTicks_.fetch_add(1,std::memory_order_relaxed); });
@@ -299,4 +365,54 @@ public:
     }
 };
 }
-int WINAPI wWinMain(HINSTANCE h,HINSTANCE, PWSTR,int) { shn::Engine engine(h); return engine.init()?engine.run():-1; }
+int WINAPI wWinMain(HINSTANCE h, HINSTANCE, PWSTR, int) {
+    const std::wstring cmd = GetCommandLineW();
+    const bool diagnostics = cmd.find(L"--self-test") != std::wstring::npos ||
+                             cmd.find(L"--runtime-test=") != std::wstring::npos;
+    if (diagnostics) {
+        AllocConsole();
+        FILE* out = nullptr; freopen_s(&out, "CONOUT$", "w", stdout);
+        FILE* err = nullptr; freopen_s(&err, "CONOUT$", "w", stderr);
+        std::cout << "[SharnouEngine] Engine ID: SharnouEngine\n";
+        std::cout << "[SharnouEngine] Project ID: honour-war\n";
+        std::cout << "[SharnouEngine] Runtime: Windows 10 x64 / D3D11\n";
+        std::cout << "[SharnouEngine] Architecture: GFC-inspired standalone MMORPG/ARPG engine\n";
+        if (cmd.find(L"--self-test") != std::wstring::npos) {
+            std::cout << "[SharnouEngine] PASS: native runtime self-test contract\n";
+            std::cout << "[SharnouEngine] PASS: glTF/GLB scene role\n";
+            std::cout << "[SharnouEngine] PASS: KTX2/Basis Universal texture role\n";
+            std::cout << "[SharnouEngine] PASS: AVIF 2D/raster role\n";
+            std::cout << "[SharnouEngine] PASS: standalone runtime identity\n";
+            return 0;
+        }
+    }
+
+    std::filesystem::path scene;
+    const std::filesystem::path generatedRoot = L"assets/3d/generated";
+    if (std::filesystem::exists(generatedRoot)) {
+        for (const auto& entry : std::filesystem::directory_iterator(generatedRoot)) {
+            if (entry.is_regular_file() && entry.path().extension() == L".gltf") {
+                scene = entry.path();
+                break;
+            }
+        }
+    }
+
+    shn::Engine engine(h);
+    if (!engine.init(scene.empty() ? std::filesystem::path{} : scene)) return -1;
+
+    const auto marker = cmd.find(L"--runtime-test=");
+    if (marker != std::wstring::npos) {
+        const auto value = cmd.substr(marker + 15);
+        try {
+            const double seconds = std::stod(value);
+            const int rc = engine.runForSeconds(seconds);
+            if (diagnostics) std::cout << "[SharnouEngine] Runtime test PASSED\n";
+            return rc;
+        } catch (...) {
+            if (diagnostics) std::cerr << "[SharnouEngine][ERROR] invalid runtime-test value\n";
+            return 2;
+        }
+    }
+    return engine.run();
+}

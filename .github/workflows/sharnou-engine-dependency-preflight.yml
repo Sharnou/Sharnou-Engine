@@ -47,7 +47,7 @@ jobs:
           $scriptPath = Join-Path $env:GITHUB_WORKSPACE $env:PREFLIGHT_SCRIPT
           @'
           $ErrorActionPreference = 'Stop'
-          
+
           $Repository = $env:TARGET_REPOSITORY
           $ExpectedCommit = $env:TARGET_COMMIT
           $Root = $env:GITHUB_WORKSPACE
@@ -56,24 +56,24 @@ jobs:
           $MarkdownFile = Join-Path $ReportDir 'dependency-report.md'
           $IncludeFile = Join-Path $ReportDir 'source-include-report.txt'
           $RuntimeFile = Join-Path $ReportDir 'runtime-assumptions-report.txt'
-          
+
           New-Item -ItemType Directory -Force -Path $ReportDir | Out-Null
-          
-          $Rows = New-Object 'System.Collections.Generic.List[object]'
-          $BlockingReasons = New-Object 'System.Collections.Generic.List[string]'
-          $LocalIncludes = New-Object 'System.Collections.Generic.List[object]'
-          $ExternalIncludes = New-Object 'System.Collections.Generic.List[object]'
-          $RuntimeReferences = New-Object 'System.Collections.Generic.List[object]'
-          
+
+          $Rows = [System.Collections.Generic.List[object]]::new()
+          $BlockingReasons = [System.Collections.Generic.List[string]]::new()
+          $LocalIncludes = [System.Collections.Generic.List[object]]::new()
+          $ExternalIncludes = [System.Collections.Generic.List[object]]::new()
+          $RuntimeReferences = [System.Collections.Generic.List[object]]::new()
+
           function Add-BlockingReason {
               param([string]$Text)
               if (-not [string]::IsNullOrWhiteSpace($Text)) {
                   if (-not ($BlockingReasons -contains $Text)) {
-                      $BlockingReasons.Add($Text)
+                      [void]$BlockingReasons.Add($Text)
                   }
               }
           }
-          
+
           function Add-DependencyRow {
               param(
                   [string]$Dependency,
@@ -88,7 +88,7 @@ jobs:
                   [string]$BlockingReason,
                   [string]$CiBuildStatus
               )
-              $Rows.Add([ordered]@{
+              [void]$Rows.Add([ordered]@{
                   Dependency = $Dependency
                   'Required source file' = $RequiredSourceFile
                   'Header status' = $HeaderStatus
@@ -102,7 +102,7 @@ jobs:
                   'CI build status' = $CiBuildStatus
               })
           }
-          
+
           function Get-FileVersionMetadata {
               param([string]$Path)
               if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
@@ -119,7 +119,7 @@ jobs:
                   return 'UNKNOWN'
               }
           }
-          
+
           function Get-PeArchitecture {
               param([string]$Path)
               if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
@@ -152,7 +152,7 @@ jobs:
                   return 'UNKNOWN'
               }
           }
-          
+
           function Get-RegistryStringValue {
               param(
                   [string]$Path,
@@ -169,7 +169,7 @@ jobs:
                   return $null
               }
           }
-          
+
           function Resolve-RepositoryLocalInclude {
               param(
                   [string]$CurrentFile,
@@ -187,7 +187,7 @@ jobs:
               }
               return $null
           }
-          
+
           function Get-IncludeGraph {
               param([string]$EntryFile)
               $seen = @{}
@@ -216,7 +216,7 @@ jobs:
                               $resolvedDisplay = $resolved.Substring($Root.Length).TrimStart('\')
                               $status = 'FOUND AND APPROVED'
                           }
-                          $LocalIncludes.Add([ordered]@{
+                          [void]$LocalIncludes.Add([ordered]@{
                               File = $current.Substring($Root.Length).TrimStart('\')
                               Line = $lineNumber
                               Include = $includeName
@@ -233,7 +233,7 @@ jobs:
                       }
                       $angleMatch = [regex]::Match($line, '^\s*#\s*include\s*<([^>]+)>')
                       if ($angleMatch.Success) {
-                          $ExternalIncludes.Add([ordered]@{
+                          [void]$ExternalIncludes.Add([ordered]@{
                               File = $current.Substring($Root.Length).TrimStart('\')
                               Line = $lineNumber
                               Include = $angleMatch.Groups[1].Value
@@ -245,37 +245,37 @@ jobs:
               }
               return @($seen.Keys)
           }
-          
+
           function Find-HeaderInRoots {
               param(
                   [string]$RelativePath,
                   [string[]]$Roots
               )
-              $found = New-Object 'System.Collections.Generic.List[string]'
+              $found = [System.Collections.Generic.List[string]]::new()
               foreach ($rootPath in $Roots) {
                   $candidate = Join-Path $rootPath $RelativePath
                   if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-                      $found.Add((Get-Item -LiteralPath $candidate).FullName)
+                      [void]$found.Add((Get-Item -LiteralPath $candidate).FullName)
                   }
               }
               return @($found | Sort-Object -Unique)
           }
-          
+
           function Find-LibraryInRoots {
               param(
                   [string]$LibraryName,
                   [string[]]$Roots
               )
-              $found = New-Object 'System.Collections.Generic.List[string]'
+              $found = [System.Collections.Generic.List[string]]::new()
               foreach ($rootPath in $Roots) {
                   $candidate = Join-Path $rootPath $LibraryName
                   if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-                      $found.Add((Get-Item -LiteralPath $candidate).FullName)
+                      [void]$found.Add((Get-Item -LiteralPath $candidate).FullName)
                   }
               }
               return @($found | Sort-Object -Unique)
           }
-          
+
           function Get-ApprovedLibavifFiles {
               param([string[]]$DependencyRoots)
               $approvedNames = @(
@@ -287,8 +287,8 @@ jobs:
                   'libavif.a'
               )
               $excludePattern = '\\(?:\.git|Build|assets|Content|node_modules|\.cache)(?:\\|$)'
-              $headerCandidates = New-Object 'System.Collections.Generic.List[string]'
-              $libraryCandidates = New-Object 'System.Collections.Generic.List[string]'
+              $headerCandidates = [System.Collections.Generic.List[string]]::new()
+              $libraryCandidates = [System.Collections.Generic.List[string]]::new()
               foreach ($dependencyRoot in $DependencyRoots) {
                   if (-not (Test-Path -LiteralPath $dependencyRoot -PathType Container)) {
                       continue
@@ -302,10 +302,10 @@ jobs:
                       $normalized = $fullName.Replace('/', '\')
                       $leafName = $file.Name
                       if ($normalized.ToLowerInvariant().EndsWith('\avif\avif.h')) {
-                          $headerCandidates.Add($fullName)
+                          [void]$headerCandidates.Add($fullName)
                       }
                       if ($approvedNames -contains $leafName) {
-                          $libraryCandidates.Add($fullName)
+                          [void]$libraryCandidates.Add($fullName)
                       }
                   }
               }
@@ -314,10 +314,10 @@ jobs:
                   Libraries = @($libraryCandidates | Sort-Object -Unique)
               }
           }
-          
+
           function Get-NearestAvifLicenseEvidence {
               param([string[]]$DependencyRoots)
-              $evidence = New-Object 'System.Collections.Generic.List[string]'
+              $evidence = [System.Collections.Generic.List[string]]::new()
               $namePattern = '(?i)(?:^|[._-])(avif|libavif)(?:$|[._-])'
               foreach ($rootPath in $DependencyRoots) {
                   if (-not (Test-Path -LiteralPath $rootPath -PathType Container)) {
@@ -328,44 +328,44 @@ jobs:
                       $name = $file.Name
                       if ($name -match '(?i)license|copying|notice|copyright') {
                           if ($name -match $namePattern -or $name -match '(?i)license|copying|notice|copyright') {
-                              $evidence.Add($file.FullName)
+                              [void]$evidence.Add($file.FullName)
                           }
                       }
                   }
               }
               return @($evidence | Sort-Object -Unique)
           }
-          
+
           $commit = (git rev-parse HEAD).Trim()
           $os = Get-CimInstance Win32_OperatingSystem
           $computer = Get-CimInstance Win32_ComputerSystem
           $runnerImage = if ([string]::IsNullOrWhiteSpace($env:ImageOS)) { 'UNKNOWN' } else { $env:ImageOS }
           $runnerImageVersion = if ([string]::IsNullOrWhiteSpace($env:ImageVersion)) { 'UNKNOWN' } else { $env:ImageVersion }
           $runnerArchitecture = if ([string]::IsNullOrWhiteSpace($env:PROCESSOR_ARCHITECTURE)) { 'UNKNOWN' } else { $env:PROCESSOR_ARCHITECTURE }
-          
+
           if ($commit -ne $ExpectedCommit) {
               Add-BlockingReason "Checked-out commit '$commit' does not match expected commit '$ExpectedCommit'."
           }
-          
+
           $clCandidates = @()
           $clCommand = Get-Command cl.exe -ErrorAction SilentlyContinue
           if ($null -ne $clCommand) {
               $clCandidates += $clCommand.Source
           }
-          
+
           $linkCandidates = @()
           $linkCommand = Get-Command link.exe -ErrorAction SilentlyContinue
           if ($null -ne $linkCommand) {
               $linkCandidates += $linkCommand.Source
           }
-          
+
           $VisualStudioRegistryRoots = @(
               'HKLM:\SOFTWARE\Microsoft\VisualStudio\Setup\Instances',
               'HKLM:\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\Setup\Instances'
           )
-          $VisualStudioInstances = New-Object 'System.Collections.Generic.List[object]'
-          $MsvcToolsets = New-Object 'System.Collections.Generic.List[object]'
-          
+          $VisualStudioInstances = [System.Collections.Generic.List[object]]::new()
+          $MsvcToolsets = [System.Collections.Generic.List[object]]::new()
+
           foreach ($registryRoot in $VisualStudioRegistryRoots) {
               if (-not (Test-Path -LiteralPath $registryRoot)) {
                   continue
@@ -380,7 +380,7 @@ jobs:
                           $displayVersion = [string]$properties.catalog_productLineVersion
                       }
                       $instanceVersion = if ([string]::IsNullOrWhiteSpace($displayVersion)) { 'UNKNOWN' } else { $displayVersion }
-                      $VisualStudioInstances.Add([ordered]@{
+                      [void]$VisualStudioInstances.Add([ordered]@{
                           RegistryRoot = $registryRoot
                           Instance = $instanceKey.PSChildName
                           InstallationPath = $installationPath
@@ -402,7 +402,7 @@ jobs:
                                   }
                                   $includePath = Join-Path $toolsetDirectory.FullName 'include'
                                   $libraryPath = Join-Path $toolsetDirectory.FullName 'lib\x64'
-                                  $MsvcToolsets.Add([ordered]@{
+                                  [void]$MsvcToolsets.Add([ordered]@{
                                       InstallationPath = $installationPath
                                       ToolsetVersion = $toolsetDirectory.Name
                                       ToolsetRoot = $toolsetDirectory.FullName
@@ -420,7 +420,7 @@ jobs:
                   }
               }
           }
-          
+
           $clCandidates = @($clCandidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)
           $linkCandidates = @($linkCandidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)
           $clMetadata = @(
@@ -443,7 +443,7 @@ jobs:
                   }
               }
           )
-          
+
           if ($clMetadata.Count -eq 0) {
               Add-DependencyRow 'MSVC cl.exe' 'src/SharnouEngine.cpp' 'UNKNOWN' 'NOT APPLICABLE' 'UNKNOWN' 'UNKNOWN' 'NOT FOUND' 'Registry/filesystem discovery only' 'MISSING' 'MSVC cl.exe was not discovered; compiler functionality is NOT TESTED.' 'NOT TESTED'
               Add-BlockingReason 'MSVC cl.exe is missing from PATH and discovered Visual Studio MSVC toolset locations.'
@@ -452,7 +452,7 @@ jobs:
               Add-DependencyRow 'MSVC cl.exe' 'src/SharnouEngine.cpp' 'NOT APPLICABLE' 'NOT APPLICABLE' (($clMetadata | ForEach-Object VersionMetadata) -join '; ') (($clMetadata | ForEach-Object Architecture) -join '; ') (($clMetadata | ForEach-Object Path) -join '; ') 'Registry/filesystem discovery only' 'FOUND — APPROVAL REQUIRED' 'cl.exe presence is evidence only; compiler functionality remains NOT TESTED and explicit approval is required.' 'NOT TESTED'
               Add-BlockingReason 'MSVC cl.exe was discovered but is not explicitly approved; compiler functionality remains NOT TESTED.'
           }
-          
+
           if ($linkMetadata.Count -eq 0) {
               Add-DependencyRow 'MSVC link.exe' 'src/SharnouEngine.cpp' 'NOT APPLICABLE' 'NOT APPLICABLE' 'UNKNOWN' 'UNKNOWN' 'NOT FOUND' 'Registry/filesystem discovery only' 'MISSING' 'MSVC link.exe was not discovered; linker functionality is NOT TESTED.' 'NOT TESTED'
               Add-BlockingReason 'MSVC link.exe is missing from PATH and discovered Visual Studio MSVC toolset locations.'
@@ -461,18 +461,18 @@ jobs:
               Add-DependencyRow 'MSVC link.exe' 'src/SharnouEngine.cpp' 'NOT APPLICABLE' 'NOT APPLICABLE' (($linkMetadata | ForEach-Object VersionMetadata) -join '; ') (($linkMetadata | ForEach-Object Architecture) -join '; ') (($linkMetadata | ForEach-Object Path) -join '; ') 'Registry/filesystem discovery only' 'FOUND — APPROVAL REQUIRED' 'link.exe presence is evidence only; linker functionality remains NOT TESTED and explicit approval is required.' 'NOT TESTED'
               Add-BlockingReason 'MSVC link.exe was discovered but is not explicitly approved; linker functionality remains NOT TESTED.'
           }
-          
+
           $kitsRoot = Get-RegistryStringValue 'HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots' 'KitsRoot10'
-          $SdkVersions = New-Object 'System.Collections.Generic.List[object]'
-          $SdkIncludeRoots = New-Object 'System.Collections.Generic.List[string]'
-          $SdkLibraryRoots = New-Object 'System.Collections.Generic.List[string]'
+          $SdkVersions = [System.Collections.Generic.List[object]]::new()
+          $SdkIncludeRoots = [System.Collections.Generic.List[string]]::new()
+          $SdkLibraryRoots = [System.Collections.Generic.List[string]]::new()
           if ($kitsRoot -and (Test-Path -LiteralPath $kitsRoot -PathType Container)) {
               $includeRoot = Join-Path $kitsRoot 'Include'
               $libraryRoot = Join-Path $kitsRoot 'Lib'
               if (Test-Path -LiteralPath $includeRoot -PathType Container) {
                   $versionDirectories = @(Get-ChildItem -LiteralPath $includeRoot -Directory -ErrorAction SilentlyContinue | Sort-Object Name)
                   foreach ($versionDirectory in $versionDirectories) {
-                      $SdkVersions.Add([ordered]@{
+                      [void]$SdkVersions.Add([ordered]@{
                           Version = $versionDirectory.Name
                           IncludeRoot = $versionDirectory.FullName
                           LibraryRoot = Join-Path $libraryRoot $versionDirectory.Name
@@ -489,7 +489,7 @@ jobs:
               )
               foreach ($candidate in $includeCandidates) {
                   if (Test-Path -LiteralPath $candidate -PathType Container) {
-                      $SdkIncludeRoots.Add($candidate)
+                      [void]$SdkIncludeRoots.Add($candidate)
                   }
               }
               $libraryCandidates = @(
@@ -498,7 +498,7 @@ jobs:
               )
               foreach ($candidate in $libraryCandidates) {
                   if (Test-Path -LiteralPath $candidate -PathType Container) {
-                      $SdkLibraryRoots.Add($candidate)
+                      [void]$SdkLibraryRoots.Add($candidate)
                   }
               }
           }
@@ -506,7 +506,7 @@ jobs:
           $SdkLibraryRoots = @($SdkLibraryRoots | Sort-Object -Unique)
           $MsvcIncludeRoots = @($MsvcToolsets | Where-Object { $_.IncludeExists } | ForEach-Object { $_.IncludePath } | Sort-Object -Unique)
           $MsvcLibraryRoots = @($MsvcToolsets | Where-Object { $_.LibraryExists } | ForEach-Object { $_.LibraryPath } | Sort-Object -Unique)
-          
+
           if ($kitsRoot -and $SdkIncludeRoots.Count -gt 0) {
               $sdkStatus = 'FOUND — APPROVAL REQUIRED'
               $sdkReason = 'Windows SDK include roots were discovered; explicit approval is required.'
@@ -516,7 +516,7 @@ jobs:
               $sdkReason = 'Windows SDK KitsRoot10 or usable include roots were not discovered.'
               Add-BlockingReason 'Windows SDK include roots are missing.'
           }
-          
+
           $HeaderRequirements = @(
               [ordered]@{ Name = 'windows.h'; Relative = 'windows.h' },
               [ordered]@{ Name = 'd3d11.h'; Relative = 'd3d11.h' },
@@ -538,7 +538,7 @@ jobs:
                   Add-BlockingReason "Required header $($header.Name) is missing."
               }
           }
-          
+
           $LibraryRequirements = @('d3d11.lib', 'dxgi.lib', 'd3dcompiler.lib', 'user32.lib')
           foreach ($libraryName in $LibraryRequirements) {
               $libraryPaths = @(Find-LibraryInRoots -LibraryName $libraryName -Roots $SdkLibraryRoots)
@@ -553,7 +553,7 @@ jobs:
                   Add-BlockingReason "Required library $libraryName is missing."
               }
           }
-          
+
           $EngineSource = Join-Path $Root 'src\SharnouEngine.cpp'
           $RuntimeIntake = Join-Path $Root 'src\asset\RuntimeAssetIntake.hpp'
           $Ktx2Container = Join-Path $Root 'src\asset\Ktx2Container.hpp'
@@ -572,12 +572,12 @@ jobs:
           else {
               Add-DependencyRow 'Ktx2Container.hpp' 'src/asset/RuntimeAssetIntake.hpp' 'FOUND' 'NOT APPLICABLE' 'REPOSITORY COMMIT PINNED' 'SOURCE' 'src/asset/Ktx2Container.hpp' 'Repository-owned source at the pinned commit' 'FOUND AND APPROVED' 'Repository-owned file is present at the verified pinned commit.' 'NOT TESTED'
           }
-          
+
           $reachableFiles = @()
           if (Test-Path -LiteralPath $EngineSource -PathType Leaf) {
               $reachableFiles = @(Get-IncludeGraph -EntryFile $EngineSource)
           }
-          
+
           $ApprovedDependencyDirectoryNames = @(
               'third_party',
               'third-party',
@@ -590,26 +590,26 @@ jobs:
               'lib',
               'libs'
           )
-          $ApprovedDependencyRoots = New-Object 'System.Collections.Generic.List[string]'
+          $ApprovedDependencyRoots = [System.Collections.Generic.List[string]]::new()
           foreach ($name in $ApprovedDependencyDirectoryNames) {
               $candidate = Join-Path $Root $name
               if (Test-Path -LiteralPath $candidate -PathType Container) {
-                  $ApprovedDependencyRoots.Add((Get-Item -LiteralPath $candidate).FullName)
+                  [void]$ApprovedDependencyRoots.Add((Get-Item -LiteralPath $candidate).FullName)
               }
           }
           foreach ($relative in @('src\third_party', 'src\vendor')) {
               $candidate = Join-Path $Root $relative
               if (Test-Path -LiteralPath $candidate -PathType Container) {
-                  $ApprovedDependencyRoots.Add((Get-Item -LiteralPath $candidate).FullName)
+                  [void]$ApprovedDependencyRoots.Add((Get-Item -LiteralPath $candidate).FullName)
               }
           }
           $ApprovedDependencyRoots = @($ApprovedDependencyRoots | Sort-Object -Unique)
-          
+
           $libavifFiles = Get-ApprovedLibavifFiles -DependencyRoots $ApprovedDependencyRoots
           $AvifHeaders = @($libavifFiles.Headers)
           $AvifLibraries = @($libavifFiles.Libraries)
           $LicenseEvidence = @(Get-NearestAvifLicenseEvidence -DependencyRoots $ApprovedDependencyRoots)
-          
+
           $AvifApiNames = @(
               'avifDecoderCreate',
               'avifDecoderSetIOFile',
@@ -646,7 +646,7 @@ jobs:
                   $AvifApiStatus = 'STATIC HEADER MISSING: ' + ($missingApiNames -join ', ')
               }
           }
-          
+
           $AvifLibraryDetails = @(
               foreach ($libraryPath in $AvifLibraries) {
                   $extension = [IO.Path]::GetExtension($libraryPath).ToLowerInvariant()
@@ -679,7 +679,7 @@ jobs:
                   }
               }
           )
-          
+
           if ($AvifHeaders.Count -eq 0) {
               $AvifApprovedStatus = 'MISSING'
               $AvifReason = 'avif/avif.h is missing from approved repository dependency directories.'
@@ -698,7 +698,7 @@ jobs:
           }
           Add-DependencyRow 'libavif / avif.h' 'src/SharnouEngine.cpp' $(if ($AvifHeaders.Count -gt 0) { 'FOUND' } else { 'MISSING' }) $(if ($AvifLibraryDetails.Count -gt 0) { 'FOUND' } else { 'MISSING' }) $AvifVersion 'UNKNOWN' ((@($AvifHeaders | ForEach-Object { $_.Substring($Root.Length).TrimStart('\') }) + @($AvifLibraryDetails | ForEach-Object { $_.Path })) -join '; ') 'Approved repository dependency directories only' $AvifApprovedStatus $AvifReason 'NOT TESTED'
           Add-BlockingReason "libavif: $AvifReason"
-          
+
           $SourceFiles = @()
           $srcRoot = Join-Path $Root 'src'
           if (Test-Path -LiteralPath $srcRoot -PathType Container) {
@@ -727,7 +727,7 @@ jobs:
                   $lineNumber++
                   foreach ($literal in $RuntimeLiteralPatterns) {
                       if ($line.IndexOf($literal, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
-                          $RuntimeReferences.Add([ordered]@{
+                          [void]$RuntimeReferences.Add([ordered]@{
                               File = $sourceFile.FullName.Substring($Root.Length).TrimStart('\')
                               Line = $lineNumber
                               MatchedLiteral = $literal
@@ -737,7 +737,7 @@ jobs:
                   }
               }
           }
-          
+
           $DirectPathReferences = @()
           $engineText = ''
           if (Test-Path -LiteralPath $EngineSource -PathType Leaf) {
@@ -751,7 +751,7 @@ jobs:
                   }
               }
           }
-          
+
           $GeneratedRuntimeDirectory = Join-Path $Root 'Build\Runtime\Generated'
           $GeneratedRuntimeFiles = @()
           if (Test-Path -LiteralPath $GeneratedRuntimeDirectory -PathType Container) {
@@ -762,14 +762,14 @@ jobs:
           }
           $ExpectedPlanPath = Join-Path $Root 'Build\Runtime\Generated\honour_war_runtime_asset_plan.json'
           $ExpectedPlanStatus = if (Test-Path -LiteralPath $ExpectedPlanPath -PathType Leaf) { 'FOUND' } else { 'MISSING' }
-          
+
           if ($BlockingReasons.Count -eq 0) {
               $Outcome = 'READY FOR APPROVED BUILD DESIGN'
           }
           else {
               $Outcome = 'BLOCKED — DEPENDENCY DECISION REQUIRED'
           }
-          
+
           $TimestampUtc = [DateTime]::UtcNow.ToString('o')
           $Report = [ordered]@{
               Schema = 'sharnou-engine-dependency-preflight/v1'
@@ -801,11 +801,11 @@ jobs:
                   VersionMetadata = if ($linkMetadata.Count -gt 0) { 'KNOWN OR UNKNOWN PER CANDIDATE' } else { 'UNKNOWN' }
                   Functionality = 'NOT TESTED'
               }
-              VisualStudioInstances = @($VisualStudioInstances)
-              MsvcToolsets = @($MsvcToolsets)
+              VisualStudioInstances = $VisualStudioInstances.ToArray()
+              MsvcToolsets = $MsvcToolsets.ToArray()
               WindowsSdk = [ordered]@{
                   KitsRoot10 = $kitsRoot
-                  Versions = @($SdkVersions)
+                  Versions = $SdkVersions.ToArray()
                   IncludeRoots = $SdkIncludeRoots
                   LibraryRoots = $SdkLibraryRoots
               }
@@ -814,8 +814,8 @@ jobs:
                   WindowsSdkHeaders = 'DISCOVERED SEPARATELY'
                   ExternalHeaders = 'DISCOVERED SEPARATELY'
                   ConditionalCompilerIncludeResolution = 'NOT TESTED'
-                  LocalIncludes = @($LocalIncludes)
-                  ExternalIncludes = @($ExternalIncludes)
+                  LocalIncludes = $LocalIncludes.ToArray()
+                  ExternalIncludes = $ExternalIncludes.ToArray()
                   ReachableLocalFiles = @($reachableFiles | ForEach-Object { $_.Substring($Root.Length).TrimStart('\') })
               }
               Libavif = [ordered]@{
@@ -832,7 +832,7 @@ jobs:
                   RuntimeDllRequirement = if (@($AvifLibraryDetails | Where-Object { $_.RuntimeDllRequirement -eq 'YES' }).Count -gt 0) { 'YES' } elseif ($AvifLibraryDetails.Count -gt 0) { 'NOT ESTABLISHED' } else { 'NOT ESTABLISHED' }
                   ApiCompatibility = $AvifApiStatus
               }
-              RuntimeAssumptions = @($RuntimeReferences)
+              RuntimeAssumptions = $RuntimeReferences.ToArray()
               DirectEnginePathReferences = @($DirectPathReferences)
               GeneratedRuntimeDirectory = [ordered]@{
                   Path = 'Build/Runtime/Generated'
@@ -840,7 +840,7 @@ jobs:
                   ExpectedPlan = 'Build/Runtime/Generated/honour_war_runtime_asset_plan.json'
                   ExpectedPlanStatus = $ExpectedPlanStatus
               }
-              Dependencies = @($Rows)
+              Dependencies = $Rows.ToArray()
               BlockingReasons = @($BlockingReasons | Sort-Object -Unique)
               CompilerFunctionality = 'NOT TESTED'
               LinkerFunctionality = 'NOT TESTED'
@@ -856,44 +856,44 @@ jobs:
               FakeExecutableCreation = 'NOT PERFORMED'
               Outcome = $Outcome
           }
-          
+
           $Report | ConvertTo-Json -Depth 40 | Set-Content -LiteralPath $JsonFile -Encoding UTF8
-          
-          $MarkdownLines = New-Object 'System.Collections.Generic.List[string]'
-          $MarkdownLines.Add('# Sharnou Engine Dependency Preflight')
-          $MarkdownLines.Add('')
-          $MarkdownLines.Add("Repository: $Repository")
-          $MarkdownLines.Add("Expected commit: $ExpectedCommit")
-          $MarkdownLines.Add("Checked-out commit: $commit")
-          $MarkdownLines.Add("Runner image: $runnerImage")
-          $MarkdownLines.Add("Runner image version: $runnerImageVersion")
-          $MarkdownLines.Add("Windows version: $($os.Version)")
-          $MarkdownLines.Add("Windows build: $($os.BuildNumber)")
-          $MarkdownLines.Add("Architecture: $runnerArchitecture")
-          $MarkdownLines.Add("Workflow run ID: $($env:GITHUB_RUN_ID)")
-          $MarkdownLines.Add("Timestamp UTC: $TimestampUtc")
-          $MarkdownLines.Add('')
-          $MarkdownLines.Add("cl.exe discovered: $($clMetadata.Count -gt 0)")
-          $MarkdownLines.Add('Compiler version metadata: KNOWN OR UNKNOWN PER CANDIDATE')
-          $MarkdownLines.Add('Compiler functionality: NOT TESTED')
-          $MarkdownLines.Add("link.exe discovered: $($linkMetadata.Count -gt 0)")
-          $MarkdownLines.Add('Linker version metadata: KNOWN OR UNKNOWN PER CANDIDATE')
-          $MarkdownLines.Add('Linker functionality: NOT TESTED')
-          $MarkdownLines.Add('')
-          $MarkdownLines.Add('Compilation: NOT ATTEMPTED')
-          $MarkdownLines.Add('Linking: NOT ATTEMPTED')
-          $MarkdownLines.Add('Installation: NOT PERFORMED')
-          $MarkdownLines.Add('Dependency download: NOT PERFORMED')
-          $MarkdownLines.Add('Dependency restoration: NOT PERFORMED')
-          $MarkdownLines.Add('Package manager: NOT INVOKED')
-          $MarkdownLines.Add('Packaging: NOT PERFORMED')
-          $MarkdownLines.Add('Executable generation: NOT ATTEMPTED')
-          $MarkdownLines.Add('Release: NOT PERFORMED')
-          $MarkdownLines.Add('')
-          $MarkdownLines.Add('## Dependency status')
-          $MarkdownLines.Add('')
-          $MarkdownLines.Add('| Dependency | Required source file | Header status | Library status | Version | Architecture | Path | Provenance | Approved status | Blocking reason |')
-          $MarkdownLines.Add('|---|---|---|---|---|---|---|---|---|---|')
+
+          $MarkdownLines = [System.Collections.Generic.List[string]]::new()
+          [void]$MarkdownLines.Add('# Sharnou Engine Dependency Preflight')
+          [void]$MarkdownLines.Add('')
+          [void]$MarkdownLines.Add("Repository: $Repository")
+          [void]$MarkdownLines.Add("Expected commit: $ExpectedCommit")
+          [void]$MarkdownLines.Add("Checked-out commit: $commit")
+          [void]$MarkdownLines.Add("Runner image: $runnerImage")
+          [void]$MarkdownLines.Add("Runner image version: $runnerImageVersion")
+          [void]$MarkdownLines.Add("Windows version: $($os.Version)")
+          [void]$MarkdownLines.Add("Windows build: $($os.BuildNumber)")
+          [void]$MarkdownLines.Add("Architecture: $runnerArchitecture")
+          [void]$MarkdownLines.Add("Workflow run ID: $($env:GITHUB_RUN_ID)")
+          [void]$MarkdownLines.Add("Timestamp UTC: $TimestampUtc")
+          [void]$MarkdownLines.Add('')
+          [void]$MarkdownLines.Add("cl.exe discovered: $($clMetadata.Count -gt 0)")
+          [void]$MarkdownLines.Add('Compiler version metadata: KNOWN OR UNKNOWN PER CANDIDATE')
+          [void]$MarkdownLines.Add('Compiler functionality: NOT TESTED')
+          [void]$MarkdownLines.Add("link.exe discovered: $($linkMetadata.Count -gt 0)")
+          [void]$MarkdownLines.Add('Linker version metadata: KNOWN OR UNKNOWN PER CANDIDATE')
+          [void]$MarkdownLines.Add('Linker functionality: NOT TESTED')
+          [void]$MarkdownLines.Add('')
+          [void]$MarkdownLines.Add('Compilation: NOT ATTEMPTED')
+          [void]$MarkdownLines.Add('Linking: NOT ATTEMPTED')
+          [void]$MarkdownLines.Add('Installation: NOT PERFORMED')
+          [void]$MarkdownLines.Add('Dependency download: NOT PERFORMED')
+          [void]$MarkdownLines.Add('Dependency restoration: NOT PERFORMED')
+          [void]$MarkdownLines.Add('Package manager: NOT INVOKED')
+          [void]$MarkdownLines.Add('Packaging: NOT PERFORMED')
+          [void]$MarkdownLines.Add('Executable generation: NOT ATTEMPTED')
+          [void]$MarkdownLines.Add('Release: NOT PERFORMED')
+          [void]$MarkdownLines.Add('')
+          [void]$MarkdownLines.Add('## Dependency status')
+          [void]$MarkdownLines.Add('')
+          [void]$MarkdownLines.Add('| Dependency | Required source file | Header status | Library status | Version | Architecture | Path | Provenance | Approved status | Blocking reason |')
+          [void]$MarkdownLines.Add('|---|---|---|---|---|---|---|---|---|---|')
           foreach ($row in $Rows) {
               $cellValues = @(
                   $row.Dependency,
@@ -908,122 +908,120 @@ jobs:
                   $row.'Blocking reason'
               )
               $escapedCells = @($cellValues | ForEach-Object { ([string]$_) -replace '\|', '\|' })
-              $MarkdownLines.Add('| ' + ($escapedCells -join ' | ') + ' |')
+              [void]$MarkdownLines.Add('| ' + ($escapedCells -join ' | ') + ' |')
           }
-          $MarkdownLines.Add('')
-          $MarkdownLines.Add('## libavif')
-          $MarkdownLines.Add("Header status: $(if ($AvifHeaders.Count -gt 0) { 'FOUND' } else { 'MISSING' })")
-          $MarkdownLines.Add("Library status: $(if ($AvifLibraryDetails.Count -gt 0) { 'FOUND' } else { 'MISSING' })")
-          $MarkdownLines.Add("Version: $AvifVersion")
-          $MarkdownLines.Add("Static linkage possible: $(@($AvifLibraryDetails | Where-Object { $_.Linkage -like 'STATIC*' }).Count -gt 0)")
-          $MarkdownLines.Add("Dynamic linkage possible: $(@($AvifLibraryDetails | Where-Object { $_.Linkage -eq 'DYNAMIC' }).Count -gt 0)")
-          $MarkdownLines.Add("Runtime DLL implication: $($Report.Libavif.RuntimeDllRequirement)")
-          $MarkdownLines.Add("Source/provenance: approved repository dependency directories only")
-          $MarkdownLines.Add("License evidence: " + ($LicenseEvidence -join '; '))
-          $MarkdownLines.Add("API compatibility: $AvifApiStatus")
-          $MarkdownLines.Add('')
-          $MarkdownLines.Add('## Include scan')
-          $MarkdownLines.Add('STATIC REPOSITORY-LOCAL INCLUDE SCAN')
-          $MarkdownLines.Add('Windows SDK headers discovered separately.')
-          $MarkdownLines.Add('External headers discovered separately.')
-          $MarkdownLines.Add('Conditional compiler include resolution NOT TESTED.')
-          $MarkdownLines.Add('')
-          $MarkdownLines.Add('## Blocking reasons')
-          $MarkdownLines.Add('')
+          [void]$MarkdownLines.Add('')
+          [void]$MarkdownLines.Add('## libavif')
+          [void]$MarkdownLines.Add("Header status: $(if ($AvifHeaders.Count -gt 0) { 'FOUND' } else { 'MISSING' })")
+          [void]$MarkdownLines.Add("Library status: $(if ($AvifLibraryDetails.Count -gt 0) { 'FOUND' } else { 'MISSING' })")
+          [void]$MarkdownLines.Add("Version: $AvifVersion")
+          [void]$MarkdownLines.Add("Static linkage possible: $(@($AvifLibraryDetails | Where-Object { $_.Linkage -like 'STATIC*' }).Count -gt 0)")
+          [void]$MarkdownLines.Add("Dynamic linkage possible: $(@($AvifLibraryDetails | Where-Object { $_.Linkage -eq 'DYNAMIC' }).Count -gt 0)")
+          [void]$MarkdownLines.Add("Runtime DLL implication: $($Report.Libavif.RuntimeDllRequirement)")
+          [void]$MarkdownLines.Add('Source/provenance: approved repository dependency directories only')
+          [void]$MarkdownLines.Add("License evidence: " + ($LicenseEvidence -join '; '))
+          [void]$MarkdownLines.Add("API compatibility: $AvifApiStatus")
+          [void]$MarkdownLines.Add('')
+          [void]$MarkdownLines.Add('## Include scan')
+          [void]$MarkdownLines.Add('STATIC REPOSITORY-LOCAL INCLUDE SCAN')
+          [void]$MarkdownLines.Add('Windows SDK headers discovered separately.')
+          [void]$MarkdownLines.Add('External headers discovered separately.')
+          [void]$MarkdownLines.Add('Conditional compiler include resolution NOT TESTED.')
+          [void]$MarkdownLines.Add('')
+          [void]$MarkdownLines.Add('## Blocking reasons')
+          [void]$MarkdownLines.Add('')
           if ($BlockingReasons.Count -eq 0) {
-              $MarkdownLines.Add('NONE')
+              [void]$MarkdownLines.Add('NONE')
           }
           else {
               foreach ($reason in @($BlockingReasons | Sort-Object -Unique)) {
-                  $MarkdownLines.Add('- ' + $reason)
+                  [void]$MarkdownLines.Add('- ' + $reason)
               }
           }
-          $MarkdownLines.Add('')
-          $MarkdownLines.Add('## Final outcome')
-          $MarkdownLines.Add('')
-          $MarkdownLines.Add($Outcome)
+          [void]$MarkdownLines.Add('')
+          [void]$MarkdownLines.Add('## Final outcome')
+          [void]$MarkdownLines.Add('')
+          [void]$MarkdownLines.Add($Outcome)
           $MarkdownLines | Set-Content -LiteralPath $MarkdownFile -Encoding UTF8
-          
-          $IncludeLines = New-Object 'System.Collections.Generic.List[string]'
-          $IncludeLines.Add('STATIC REPOSITORY-LOCAL INCLUDE SCAN')
-          $IncludeLines.Add('Windows SDK headers are discovered separately.')
-          $IncludeLines.Add('External headers are discovered separately.')
-          $IncludeLines.Add('Conditional compiler include resolution NOT TESTED.')
-          $IncludeLines.Add('')
-          $IncludeLines.Add('Repository-local includes:')
+
+          $IncludeLines = [System.Collections.Generic.List[string]]::new()
+          [void]$IncludeLines.Add('STATIC REPOSITORY-LOCAL INCLUDE SCAN')
+          [void]$IncludeLines.Add('Windows SDK headers are discovered separately.')
+          [void]$IncludeLines.Add('External headers are discovered separately.')
+          [void]$IncludeLines.Add('Conditional compiler include resolution NOT TESTED.')
+          [void]$IncludeLines.Add('')
+          [void]$IncludeLines.Add('Repository-local includes:')
           if ($LocalIncludes.Count -eq 0) {
-              $IncludeLines.Add('NONE FOUND')
+              [void]$IncludeLines.Add('NONE FOUND')
           }
           else {
               foreach ($includeRecord in $LocalIncludes) {
-                  $IncludeLines.Add("$($includeRecord.File):$($includeRecord.Line): $($includeRecord.Include) -> $($includeRecord.Resolved) [$($includeRecord.Status)]")
+                  [void]$IncludeLines.Add("$($includeRecord.File):$($includeRecord.Line): $($includeRecord.Include) -> $($includeRecord.Resolved) [$($includeRecord.Status)]")
               }
           }
-          $IncludeLines.Add('')
-          $IncludeLines.Add('External headers:')
+          [void]$IncludeLines.Add('')
+          [void]$IncludeLines.Add('External headers:')
           if ($ExternalIncludes.Count -eq 0) {
-              $IncludeLines.Add('NONE FOUND')
+              [void]$IncludeLines.Add('NONE FOUND')
           }
           else {
               foreach ($includeRecord in $ExternalIncludes) {
-                  $IncludeLines.Add("$($includeRecord.File):$($includeRecord.Line): <$($includeRecord.Include)>")
-                  $IncludeLines.Add("  Resolution: $($includeRecord.Resolution)")
+                  [void]$IncludeLines.Add("$($includeRecord.File):$($includeRecord.Line): <$($includeRecord.Include)>")
+                  [void]$IncludeLines.Add("  Resolution: $($includeRecord.Resolution)")
               }
           }
           $IncludeLines | Set-Content -LiteralPath $IncludeFile -Encoding UTF8
-          
-          $RuntimeLines = New-Object 'System.Collections.Generic.List[string]'
-          $RuntimeLines.Add('RUNTIME ASSUMPTIONS REPORT')
-          $RuntimeLines.Add('Static source scan only; runtime execution was NOT PERFORMED.')
-          $RuntimeLines.Add('Literal substring matching is used for configured runtime patterns.')
-          $RuntimeLines.Add('')
-          $RuntimeLines.Add('Direct path-like references from SharnouEngine.cpp:')
+
+          $RuntimeLines = [System.Collections.Generic.List[string]]::new()
+          [void]$RuntimeLines.Add('RUNTIME ASSUMPTIONS REPORT')
+          [void]$RuntimeLines.Add('Static source scan only; runtime execution was NOT PERFORMED.')
+          [void]$RuntimeLines.Add('Literal substring matching is used for configured runtime patterns.')
+          [void]$RuntimeLines.Add('')
+          [void]$RuntimeLines.Add('Direct path-like references from SharnouEngine.cpp:')
           if ($DirectPathReferences.Count -eq 0) {
-              $RuntimeLines.Add('NONE FOUND')
+              [void]$RuntimeLines.Add('NONE FOUND')
           }
           else {
               foreach ($pathRecord in $DirectPathReferences) {
-                  $RuntimeLines.Add($pathRecord.PathLiteral)
+                  [void]$RuntimeLines.Add($pathRecord.PathLiteral)
               }
           }
-          $RuntimeLines.Add('')
-          $RuntimeLines.Add('Configured runtime literal matches:')
+          [void]$RuntimeLines.Add('')
+          [void]$RuntimeLines.Add('Configured runtime literal matches:')
           if ($RuntimeReferences.Count -eq 0) {
-              $RuntimeLines.Add('NONE FOUND')
+              [void]$RuntimeLines.Add('NONE FOUND')
           }
           else {
               foreach ($runtimeRecord in $RuntimeReferences) {
-                  $RuntimeLines.Add("$($runtimeRecord.File):$($runtimeRecord.Line): [$($runtimeRecord.MatchedLiteral)] $($runtimeRecord.Source)")
+                  [void]$RuntimeLines.Add("$($runtimeRecord.File):$($runtimeRecord.Line): [$($runtimeRecord.MatchedLiteral)] $($runtimeRecord.Source)")
               }
           }
-          $RuntimeLines.Add('')
-          $RuntimeLines.Add('Build/Runtime/Generated existing files:')
+          [void]$RuntimeLines.Add('')
+          [void]$RuntimeLines.Add('Build/Runtime/Generated existing files:')
           if ($GeneratedRuntimeFiles.Count -eq 0) {
-              $RuntimeLines.Add('NONE FOUND')
+              [void]$RuntimeLines.Add('NONE FOUND')
           }
           else {
               foreach ($generatedFile in $GeneratedRuntimeFiles) {
-                  $RuntimeLines.Add($generatedFile)
+                  [void]$RuntimeLines.Add($generatedFile)
               }
           }
-          $RuntimeLines.Add('')
-          $RuntimeLines.Add('Expected generated runtime plan:')
+          [void]$RuntimeLines.Add('')
+          [void]$RuntimeLines.Add('Expected generated runtime plan:')
           if ($ExpectedPlanStatus -eq 'FOUND') {
-              $RuntimeLines.Add('FOUND: Build/Runtime/Generated/honour_war_runtime_asset_plan.json')
+              [void]$RuntimeLines.Add('FOUND: Build/Runtime/Generated/honour_war_runtime_asset_plan.json')
           }
           else {
-              $RuntimeLines.Add('MISSING: Build/Runtime/Generated/honour_war_runtime_asset_plan.json')
+              [void]$RuntimeLines.Add('MISSING: Build/Runtime/Generated/honour_war_runtime_asset_plan.json')
           }
           $RuntimeLines | Set-Content -LiteralPath $RuntimeFile -Encoding UTF8
-          
+
           Write-Output $Outcome
           return
-
           '@ | Set-Content -LiteralPath $scriptPath -Encoding UTF8
 
       - name: Validate PowerShell syntax
         shell: pwsh
-        continue-on-error: false
         run: |
           $ErrorActionPreference = 'Stop'
           $scriptPath = Join-Path $env:GITHUB_WORKSPACE $env:PREFLIGHT_SCRIPT
@@ -1047,9 +1045,7 @@ jobs:
           Write-Host 'ACTUAL POWERSHELL PARSER: PASSED'
 
       - name: Generate and run dependency preflight
-        if: always()
         shell: pwsh
-        continue-on-error: true
         run: |
           $ErrorActionPreference = 'Stop'
           $reportDirectory = Join-Path $env:GITHUB_WORKSPACE $env:REPORT_DIR
@@ -1063,6 +1059,10 @@ jobs:
           }
           catch {
               $failureReason = $_.Exception.Message
+              $failureType = $_.Exception.GetType().FullName
+              $failureLine = $_.InvocationInfo.ScriptLineNumber
+              $failurePosition = $_.InvocationInfo.OffsetInLine
+              $failureCommand = $_.InvocationInfo.Line
               $checkedOutCommit = 'UNKNOWN'
               try {
                   $checkedOutCommit = (git rev-parse HEAD).Trim()
@@ -1079,29 +1079,12 @@ jobs:
                   WorkflowRunId = $env:GITHUB_RUN_ID
                   WorkflowRunAttempt = $env:GITHUB_RUN_ATTEMPT
                   TimestampUtc = [DateTime]::UtcNow.ToString('o')
-                  CompilerDiscovery = [ordered]@{
-                      Discovered = $false
-                      Candidates = @()
-                      VersionMetadata = 'UNKNOWN'
-                      Functionality = 'NOT TESTED'
-                  }
-                  LinkerDiscovery = [ordered]@{
-                      Discovered = $false
-                      Candidates = @()
-                      VersionMetadata = 'UNKNOWN'
-                      Functionality = 'NOT TESTED'
-                  }
-                  IncludeScan = [ordered]@{
-                      Label = 'STATIC REPOSITORY-LOCAL INCLUDE SCAN'
-                      WindowsSdkHeaders = 'DISCOVERED SEPARATELY'
-                      ExternalHeaders = 'DISCOVERED SEPARATELY'
-                      ConditionalCompilerIncludeResolution = 'NOT TESTED'
-                      LocalIncludes = @()
-                      ExternalIncludes = @()
-                  }
+                  CompilerDiscovery = [ordered]@{ Discovered = $false; Candidates = @(); VersionMetadata = 'UNKNOWN'; Functionality = 'NOT TESTED' }
+                  LinkerDiscovery = [ordered]@{ Discovered = $false; Candidates = @(); VersionMetadata = 'UNKNOWN'; Functionality = 'NOT TESTED' }
+                  IncludeScan = [ordered]@{ Label = 'STATIC REPOSITORY-LOCAL INCLUDE SCAN'; WindowsSdkHeaders = 'DISCOVERED SEPARATELY'; ExternalHeaders = 'DISCOVERED SEPARATELY'; ConditionalCompilerIncludeResolution = 'NOT TESTED'; LocalIncludes = @(); ExternalIncludes = @() }
                   RuntimeAssumptions = @()
                   Dependencies = @()
-                  BlockingReasons = @("Preflight report generation error: $failureReason")
+                  BlockingReasons = @('Preflight report generation error: ' + $failureReason, 'Exception type: ' + $failureType, 'Script line: ' + [string]$failureLine, 'Script offset: ' + [string]$failurePosition, 'Command: ' + [string]$failureCommand)
                   CompilerFunctionality = 'NOT TESTED'
                   LinkerFunctionality = 'NOT TESTED'
                   Compilation = 'NOT ATTEMPTED'
@@ -1122,40 +1105,28 @@ jobs:
               $fallbackRuntimePath = Join-Path $reportDirectory 'runtime-assumptions-report.txt'
               $fallbackJson | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $fallbackJsonPath -Encoding UTF8
               $fallbackMarkdown = @(
-                  '# Sharnou Engine Dependency Preflight'
-                  ''
-                  'BLOCKED — DEPENDENCY DECISION REQUIRED'
-                  ''
-                  "Preflight report generation error: $failureReason"
-                  ''
-                  'Compiler functionality: NOT TESTED'
-                  'Linker functionality: NOT TESTED'
-                  'Compilation: NOT ATTEMPTED'
-                  'Linking: NOT ATTEMPTED'
-                  'Installation: NOT PERFORMED'
-                  'Dependency download: NOT PERFORMED'
-                  'Dependency restoration: NOT PERFORMED'
-                  'Package manager: NOT INVOKED'
-                  'Packaging: NOT PERFORMED'
-                  'Executable generation: NOT ATTEMPTED'
+                  '# Sharnou Engine Dependency Preflight', '',
+                  'BLOCKED — DEPENDENCY DECISION REQUIRED', '',
+                  "Preflight report generation error: $failureReason",
+                  "Exception type: $failureType",
+                  "Script line: $failureLine",
+                  "Script offset: $failurePosition",
+                  "Command: $failureCommand", '',
+                  'Compiler functionality: NOT TESTED',
+                  'Linker functionality: NOT TESTED',
+                  'Compilation: NOT ATTEMPTED',
+                  'Linking: NOT ATTEMPTED',
+                  'Installation: NOT PERFORMED',
+                  'Dependency download: NOT PERFORMED',
+                  'Dependency restoration: NOT PERFORMED',
+                  'Package manager: NOT INVOKED',
+                  'Packaging: NOT PERFORMED',
+                  'Executable generation: NOT ATTEMPTED',
                   'Release: NOT PERFORMED'
               )
               $fallbackMarkdown | Set-Content -LiteralPath $fallbackMarkdownPath -Encoding UTF8
-              $fallbackInclude = @(
-                  'STATIC REPOSITORY-LOCAL INCLUDE SCAN'
-                  'Windows SDK headers are discovered separately.'
-                  'External headers are discovered separately.'
-                  'Conditional compiler include resolution NOT TESTED.'
-                  ''
-                  'Preflight report generation failed before include scanning.'
-              )
-              $fallbackInclude | Set-Content -LiteralPath $fallbackIncludePath -Encoding UTF8
-              $fallbackRuntime = @(
-                  'RUNTIME ASSUMPTIONS REPORT'
-                  'Preflight report generation failed before runtime scanning.'
-                  'Runtime execution was NOT PERFORMED.'
-              )
-              $fallbackRuntime | Set-Content -LiteralPath $fallbackRuntimePath -Encoding UTF8
+              @('STATIC REPOSITORY-LOCAL INCLUDE SCAN', 'Windows SDK headers are discovered separately.', 'External headers are discovered separately.', 'Conditional compiler include resolution NOT TESTED.', '', 'Preflight report generation failed before include scanning.') | Set-Content -LiteralPath $fallbackIncludePath -Encoding UTF8
+              @('RUNTIME ASSUMPTIONS REPORT', 'Preflight report generation failed before runtime scanning.', 'Runtime execution was NOT PERFORMED.') | Set-Content -LiteralPath $fallbackRuntimePath -Encoding UTF8
           }
           $jsonPath = Join-Path $reportDirectory 'dependency-report.json'
           if (-not (Test-Path -LiteralPath $jsonPath -PathType Leaf)) {

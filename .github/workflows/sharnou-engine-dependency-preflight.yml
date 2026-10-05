@@ -773,6 +773,7 @@ jobs:
           $TimestampUtc = [DateTime]::UtcNow.ToString('o')
           $Report = [ordered]@{
               Schema = 'sharnou-engine-dependency-preflight/v1'
+              preflight_execution_status = 'COMPLETED'
               Mode = 'READ_ONLY'
               Repository = $Repository
               ExpectedCommit = $ExpectedCommit
@@ -1060,9 +1061,15 @@ jobs:
           catch {
               $failureReason = $_.Exception.Message
               $failureType = $_.Exception.GetType().FullName
-              $failureLine = $_.InvocationInfo.ScriptLineNumber
-              $failurePosition = $_.InvocationInfo.OffsetInLine
-              $failureCommand = $_.InvocationInfo.Line
+              $failureCategoryInfo = $_.CategoryInfo.ToString()
+              $failureFullyQualifiedErrorId = $_.FullyQualifiedErrorId
+              $failureScriptStackTrace = $_.ScriptStackTrace
+              $failureScriptName = $_.InvocationInfo.ScriptName
+              $failureLineNumber = $_.InvocationInfo.ScriptLineNumber
+              $failureOffsetInLine = $_.InvocationInfo.OffsetInLine
+              $failurePositionMessage = $_.InvocationInfo.PositionMessage
+              $failureSourceLine = $_.InvocationInfo.Line
+              $failureTargetObject = if ($null -ne $_.TargetObject) { [string]$_.TargetObject } else { $null }
               $checkedOutCommit = 'UNKNOWN'
               try {
                   $checkedOutCommit = (git rev-parse HEAD).Trim()
@@ -1079,12 +1086,38 @@ jobs:
                   WorkflowRunId = $env:GITHUB_RUN_ID
                   WorkflowRunAttempt = $env:GITHUB_RUN_ATTEMPT
                   TimestampUtc = [DateTime]::UtcNow.ToString('o')
+                  preflight_execution_status = 'FAILED_INTERNAL'
+                  PreflightExecutionDiagnostics = [ordered]@{
+                      ExceptionType = $failureType
+                      ExceptionMessage = $failureReason
+                      CategoryInfo = $failureCategoryInfo
+                      FullyQualifiedErrorId = $failureFullyQualifiedErrorId
+                      ScriptStackTrace = $failureScriptStackTrace
+                      ScriptName = $failureScriptName
+                      ScriptLineNumber = $failureLineNumber
+                      OffsetInLine = $failureOffsetInLine
+                      PositionMessage = $failurePositionMessage
+                      SourceLine = $failureSourceLine
+                      TargetObject = $failureTargetObject
+                  }
                   CompilerDiscovery = [ordered]@{ Discovered = $false; Candidates = @(); VersionMetadata = 'UNKNOWN'; Functionality = 'NOT TESTED' }
                   LinkerDiscovery = [ordered]@{ Discovered = $false; Candidates = @(); VersionMetadata = 'UNKNOWN'; Functionality = 'NOT TESTED' }
                   IncludeScan = [ordered]@{ Label = 'STATIC REPOSITORY-LOCAL INCLUDE SCAN'; WindowsSdkHeaders = 'DISCOVERED SEPARATELY'; ExternalHeaders = 'DISCOVERED SEPARATELY'; ConditionalCompilerIncludeResolution = 'NOT TESTED'; LocalIncludes = @(); ExternalIncludes = @() }
                   RuntimeAssumptions = @()
                   Dependencies = @()
-                  BlockingReasons = @('Preflight report generation error: ' + $failureReason, 'Exception type: ' + $failureType, 'Script line: ' + [string]$failureLine, 'Script offset: ' + [string]$failurePosition, 'Command: ' + [string]$failureCommand)
+                  BlockingReasons = @(
+                      'Preflight report generation error: ' + $failureReason
+                      'Exception type: ' + $failureType
+                      'Exception message: ' + $failureReason
+                      'Category info: ' + $failureCategoryInfo
+                      'Fully qualified error ID: ' + $failureFullyQualifiedErrorId
+                      'Script stack trace: ' + $failureScriptStackTrace
+                      'Script name: ' + $failureScriptName
+                      'Script line number: ' + [string]$failureLineNumber
+                      'Offset in line: ' + [string]$failureOffsetInLine
+                      'Position message: ' + $failurePositionMessage
+                      'Source line: ' + $failureSourceLine
+                  )
                   CompilerFunctionality = 'NOT TESTED'
                   LinkerFunctionality = 'NOT TESTED'
                   Compilation = 'NOT ATTEMPTED'
@@ -1107,22 +1140,30 @@ jobs:
               $fallbackMarkdown = @(
                   '# Sharnou Engine Dependency Preflight', '',
                   'BLOCKED — DEPENDENCY DECISION REQUIRED', '',
+                  'preflight_execution_status: FAILED_INTERNAL',
+                  '',
                   "Preflight report generation error: $failureReason",
                   "Exception type: $failureType",
-                  "Script line: $failureLine",
-                  "Script offset: $failurePosition",
-                  "Command: $failureCommand", '',
-                  'Compiler functionality: NOT TESTED',
-                  'Linker functionality: NOT TESTED',
+                  "Exception message: $failureReason",
+                  "Category info: $failureCategoryInfo",
+                  "Fully qualified error ID: $failureFullyQualifiedErrorId",
+                  "Script stack trace: $failureScriptStackTrace",
+                  "Script name: $failureScriptName",
+                  "Script line number: $failureLineNumber",
+                  "Offset in line: $failureOffsetInLine",
+                  "Position message: $failurePositionMessage",
+                  "Source line: $failureSourceLine",
+                  ("Target object: " + (if ($null -eq $failureTargetObject) { '<not present>' } else { $failureTargetObject })),
+                  '',
+                  'CompilerFunctionality: NOT TESTED',
+                  'LinkerFunctionality: NOT TESTED',
                   'Compilation: NOT ATTEMPTED',
                   'Linking: NOT ATTEMPTED',
                   'Installation: NOT PERFORMED',
-                  'Dependency download: NOT PERFORMED',
-                  'Dependency restoration: NOT PERFORMED',
-                  'Package manager: NOT INVOKED',
-                  'Packaging: NOT PERFORMED',
-                  'Executable generation: NOT ATTEMPTED',
-                  'Release: NOT PERFORMED'
+                  'Download: NOT PERFORMED',
+                  'DependencyRestoration: NOT PERFORMED',
+                  'ExecutableGeneration: NOT ATTEMPTED',
+                  'Outcome: BLOCKED — DEPENDENCY DECISION REQUIRED'
               )
               $fallbackMarkdown | Set-Content -LiteralPath $fallbackMarkdownPath -Encoding UTF8
               @('STATIC REPOSITORY-LOCAL INCLUDE SCAN', 'Windows SDK headers are discovered separately.', 'External headers are discovered separately.', 'Conditional compiler include resolution NOT TESTED.', '', 'Preflight report generation failed before include scanning.') | Set-Content -LiteralPath $fallbackIncludePath -Encoding UTF8

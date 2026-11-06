@@ -1,0 +1,32 @@
+name: Verify Pinned Sharnou Compiler and Engine Compatibility
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-pin-and-report-target:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout Engine
+        uses: actions/checkout@v4
+      - name: Resolve compiler and report source compatibility
+        shell: powershell
+        env:
+          SHARNOU_COMPILER_READ_TOKEN: ${{ secrets.SHARNOU_COMPILER_READ_TOKEN }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SHARNOU_COMPILER_READ_TOKEN)) { throw 'Add repository secret SHARNOU_COMPILER_READ_TOKEN with contents:read access to Sharnou/Sharnou-Compiler.' }
+          $resolved = & .\toolchain\Resolve-PinnedSharnouCompiler.ps1
+          $cpp = @(Get-ChildItem .\src -Recurse -File | Where-Object { $_.Extension -in @('.cpp','.cc','.cxx','.hpp','.h') })
+          if ($cpp.Count -gt 0 -and -not $resolved.NativeCppFrontend) {
+            $message = 'PIN VERIFIED. ENGINE BUILD BLOCKED: pinned compiler accepts .sharnou only; Engine currently contains C++ sources. No executable was built.'
+            Write-Warning $message
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value '## Sharnou compiler pin: PASS'
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value ''
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value '**Build status: BLOCKED**'
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value $message
+          } else {
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value '## Sharnou compiler pin and declared source target: PASS'
+          }

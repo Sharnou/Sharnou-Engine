@@ -35,8 +35,9 @@ if ([string]$release.tag_name -cne $tag) { throw 'GitHub returned a different re
 
 $requiredNames = @($assetName, ($assetName + '.sha256'), 'release-manifest.json', 'CHANGELOG.md')
 foreach ($requiredName in $requiredNames) {
-    if (-not (@($release.assets | Where-Object { $_.name -ceq $requiredName }).Count -eq 1)) {
-        throw "Pinned release is missing required asset '$requiredName'."
+        $assetMatches = @($release.assets | Where-Object { $_.name -ceq $requiredName })
+    if ($assetMatches.Count -ne 1) {
+        throw "Pinned release is missing or duplicates required asset '$requiredName'."
     }
 }
 $zipAsset = @($release.assets | Where-Object { $_.name -ceq $assetName })[0]

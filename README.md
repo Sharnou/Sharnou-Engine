@@ -39,3 +39,17 @@ The IDE intake boundary may accept registered source formats. Canonical runtime 
 4. Existing-runtime self-test.
 5. Actual runtime gameplay test.
 6. Real gameplay screenshot only after executable runtime evidence exists.
+
+## Pinned Sharnou compiler release
+
+compiler-version.json pins R26.0-R2-R8 by immutable release tag and archive SHA-256. This release contains a PowerShell bootstrap for .sharnou, not a C++ frontend or native sharnou-cxx.exe. This repository currently contains .cpp/.hpp Engine sources; those files cannot be compiled by the pinned release. The resolver downloads only the exact pinned release, verifies the ZIP SHA-256, the 658-entry count, and the embedded bootstrap compiler hash.
+
+Windows PowerShell 5.1:
+
+    $env:SHARNOU_COMPILER_READ_TOKEN = '<read-only token>'
+    .\toolchain\Resolve-PinnedSharnouCompiler.ps1
+    .\toolchain\Build-SharnouEngine-WithPinnedCompiler.ps1
+
+The second command intentionally fails closed with BUILD BLOCKED while the Engine source remains C++ and the pinned compiler has no C++ frontend. No external compiler fallback is attempted. The engine build cannot be reported as successful until either a Sharnou C++ frontend/native driver is delivered or the Engine is ported to supported .sharnou.
+
+Run Actions -> Verify Pinned Sharnou Compiler and Engine Compatibility -> Run workflow after adding SHARNOU_COMPILER_READ_TOKEN as a repository secret. That workflow verifies the pin and reports the build blocker; it does not claim to compile the Engine.

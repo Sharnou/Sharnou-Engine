@@ -1,0 +1,14 @@
+# Native Sharnou text formats: LF line endings.
+*.sharnou text eol=lf
+*.sharnouproj text eol=lf
+*.sharnoumeta text eol=lf
+*.sharnouasset text eol=lf
+
+# Interoperable asset formats.
+*.gltf text eol=lf
+*.glb binary
+*.ktx2 binary
+*.avif binary
+
+# Canonical format governance document.
+Docs/FileFormats.md text eol=lf

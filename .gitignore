@@ -26,3 +26,16 @@ Logs/
 CrashDumps/
 Thumbs.db
 Desktop.ini
+
+# Additional generated native compiler/linker artifacts.
+*.exp
+*.pch
+*.idb
+*.res
+*.tlog/
+*.lastbuildstate
+*.cache
+*.tmp
+
+# No tracked files existed under Build/ at the inventory commit.
+Build/

@@ -29,7 +29,7 @@ if ([string]::IsNullOrWhiteSpace($Compiler)) {
 }
 
 if (!$Compiler) {
-    throw "Sharnou self-contained compiler is missing. Build is intentionally fail-closed; no Visual Studio, MSBuild, Windows SDK, CMake, vcpkg, Unity, Unreal, or external compiler download is permitted."
+    throw "Approved standalone Sharnou compiler executable is missing at the configured path. Build remains fail-closed; no external tool bootstrap or compiler download is permitted."
 }
 
 if (!(Test-Path $Compiler -PathType Leaf)) { throw "Compiler not found: $Compiler" }

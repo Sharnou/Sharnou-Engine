@@ -6,7 +6,7 @@ $violations = New-Object System.Collections.Generic.List[string]
 foreach($pattern in $forbiddenFiles){
   Get-ChildItem -LiteralPath $root -Recurse -File -Force -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -like $pattern -and $_.FullName -notmatch "[\\/]legacy[\\/]" } |
-    ForEach-Object { $violations.Add("FORBIDDEN BUILD FILE: $($_.FullName.Substring($root.Length).TrimStart('\\','/'))") }
+    ForEach-Object { $violations.Add("FORBIDDEN BUILD FILE: $($_.FullName.Substring($root.Length).TrimStart([char[]]@('\','/')))") }
 }
 
 # Executable/build-capable text is scanned for active forbidden tool usage.
@@ -32,7 +32,7 @@ Get-ChildItem -LiteralPath $root -Recurse -File -Force -ErrorAction SilentlyCont
     $content=Get-Content -LiteralPath $path -Raw
     foreach($pattern in $forbiddenText){
       if($content -match $pattern){
-        $violations.Add("FORBIDDEN ACTIVE TOOL REFERENCE: $($path.Substring($root.Length).TrimStart('\\','/')) -> $pattern")
+        $violations.Add("FORBIDDEN ACTIVE TOOL REFERENCE: $($path.Substring($root.Length).TrimStart([char[]]@('\','/'))) -> $pattern")
       }
     }
   }
@@ -46,7 +46,7 @@ if(Test-Path $textureDir){
     if($_.Name -match "^README\.md$"){ return }
     $ext=$_.Extension.ToLowerInvariant()
     if($ext -notin @(".avif",".ktx2")){
-      $violations.Add("REJECTED TEXTURE FORMAT: $($_.FullName.Substring($root.Length).TrimStart('\\','/'))")
+      $violations.Add("REJECTED TEXTURE FORMAT: $($_.FullName.Substring($root.Length).TrimStart([char[]]@('\','/')))")
     }
   }
 }
@@ -60,7 +60,7 @@ if(Test-Path $modelDir){
     if($_.Name -match "^README\.md$"){ return }
     $ext=$_.Extension.ToLowerInvariant()
     if($ext -notin @(".gltf",".glb")){
-      $violations.Add("REJECTED RUNTIME MODEL FORMAT: $($_.FullName.Substring($root.Length).TrimStart('\\','/'))")
+      $violations.Add("REJECTED RUNTIME MODEL FORMAT: $($_.FullName.Substring($root.Length).TrimStart([char[]]@('\','/')))")
     }
   }
 }

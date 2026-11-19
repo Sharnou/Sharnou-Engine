@@ -39,3 +39,8 @@ The IDE intake boundary may accept registered source formats. Canonical runtime 
 4. Existing-runtime self-test.
 5. Actual runtime gameplay test.
 6. Real gameplay screenshot only after executable runtime evidence exists.
+
+
+## Production roadmap
+
+See [docs/PRODUCTION_ROADMAP.md](docs/PRODUCTION_ROADMAP.md) for the staged toolchain unblock, runtime lifecycle, real geometry renderer, glTF/GLB + KTX2 + AVIF asset path, PBR, animation, physics, GPU streaming, MMO server, IDE integration and production acceptance gates. Current compiler/build compatibility limitations are explicitly tracked there.
